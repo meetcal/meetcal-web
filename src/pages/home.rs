@@ -33,22 +33,43 @@ pub fn BodySection() -> impl IntoView {
     view! {
         <h2>"Everything you need to stay on track"</h2>
 
-        <FeatureSection title="Simple Schedule View" subtitle="Access your competition schedule instantly with our clean, intuitive interface." />
+        <FeatureSection title="Simple Schedule View" subtitle="Access your competition schedule instantly without opening a single PDF." />
 
-        <FeatureSection title="Save to Calendar" subtitle="Access your competition schedule instantly with our clean, intuitive interface." />
+        <FeatureSection title="Save to Calendar" subtitle="Save sessions within the app or to your calendar to always know where to be." />
 
         <FeatureSection title="Track Your Team" subtitle="Keep tabs on all your athletes and teams in one place." />
 
         <FeatureSection title="Smart Filtering" subtitle="Filter by weight class, platform, or club to find exactly what you need." />
 
-        <FeatureSection title="Cross-Platform" subtitle="Available on both iOS and Android" />
+        <FeatureSection title="Cross-Platform" subtitle="Available on both iOS and Android, supporting both mobile and tablets." />
     }
 }
 
 #[component]
 pub fn HighlightSection() -> impl IntoView {
+    let screenshots = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"];
+
     view! {
-        <h2>"Throw Out the PDFs"</h2>
-        <p>"Experience MeetCal's intuitive interface designed for athletes, coaches, and spectators."</p>
+        <section class="highlight-section">
+            <div class="highlight-copy">
+                <p class="highlight-eyebrow">"Built for meet day"</p>
+                <h2>"Throw Out the PDFs"</h2>
+                <p>"Experience MeetCal's intuitive interface designed for athletes, coaches, and spectators."</p>
+            </div>
+            <div class="screenshot-marquee" aria-label="A scrolling preview of MeetCal app screens">
+                <div class="screenshot-track">
+                    <div class="screenshot-set">
+                        {screenshots.iter().map(|screenshot| view! {
+                            <img src=format!("/images/{screenshot}.png") alt="" />
+                        }).collect_view()}
+                    </div>
+                    <div class="screenshot-set" aria-hidden="true">
+                        {screenshots.iter().map(|screenshot| view! {
+                            <img src=format!("/images/{screenshot}.png") alt="" />
+                        }).collect_view()}
+                    </div>
+                </div>
+            </div>
+        </section>
     }
 }
