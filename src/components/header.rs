@@ -1,8 +1,13 @@
+use crate::auth::{
+    AuthContext, AuthState, mount_user_button, open_clerk_sign_in, unmount_user_button,
+};
 use leptos::prelude::*;
 use leptos_router::components::A;
 
 #[component]
 pub fn Header() -> impl IntoView {
+    let auth = expect_context::<AuthContext>();
+
     view! {
         <header class="site-header">
             <A href="/" attr:class="brand-link">
@@ -51,11 +56,39 @@ pub fn Header() -> impl IntoView {
                         </svg>
                     </a>
                 </nav>
-                <A href="https://accounts.meetcal.app/sign-in" attr:class="profile-button">
-                    <span class="profile-icon" aria-hidden="true"></span>
-                    <span>"Profile"</span>
-                </A>
+                {move || match auth.state.get() {
+                    AuthState::SignedIn(user_id) => view! { <ClerkUserButton user_id /> }.into_any(),
+                    AuthState::Loading => view! {
+                        <span class="auth-button-placeholder" aria-label="Loading account"></span>
+                    }.into_any(),
+                    AuthState::SignedOut => view! {
+                        <button class="profile-button" type="button" on:click=move |_| open_clerk_sign_in()>
+                            "Sign in"
+                        </button>
+                    }.into_any(),
+                    AuthState::ConfigurationError(_) => view! {
+                        <button class="profile-button" type="button" disabled=true>"Sign in"</button>
+                    }.into_any(),
+                }}
             </div>
         </header>
     }
+}
+
+#[component]
+fn ClerkUserButton(user_id: String) -> impl IntoView {
+    let container = NodeRef::<leptos::html::Div>::new();
+
+    Effect::new(move |_| {
+        if let Some(element) = container.get() {
+            mount_user_button(&element, &user_id);
+        }
+    });
+    on_cleanup(move || {
+        if let Some(element) = container.get_untracked() {
+            unmount_user_button(&element);
+        }
+    });
+
+    view! { <div class="clerk-user-button" node_ref=container></div> }
 }

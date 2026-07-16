@@ -1,3 +1,5 @@
+set dotenv-load := true
+
 # No args auto runs CLI list of options
 default: choose
 

@@ -11,6 +11,7 @@ use meetcal_web::pages::{
     privacy::PrivacyPage,
     terms::TermsPage,
 };
+use meetcal_web::{auth::provide_auth, components::subscription_gate::SubscriptionGate};
 
 fn main() {
     leptos::mount::mount_to_body(App)
@@ -18,17 +19,19 @@ fn main() {
 
 #[component]
 fn App() -> impl IntoView {
+    provide_auth();
+
     view! {
         <Router>
             <main>
                 <Routes fallback=|| view! { <NotFound /> }>
                     <Route path=path!("/") view=Home />
-                    <Route path=path!("/comp-data") view=CompData />
-                    <Route path=path!("/qualifying-totals") view=QualifyingTotals />
-                    <Route path=path!("/standards") view=Standards />
-                    <Route path=path!("/records") view=Records />
-                    <Route path=path!("/results") view=Results />
-                    <Route path=path!("/rankings") view=Rankings />
+                    <Route path=path!("/comp-data") view=|| view! { <SubscriptionGate><CompData /></SubscriptionGate> } />
+                    <Route path=path!("/qualifying-totals") view=|| view! { <SubscriptionGate><QualifyingTotals /></SubscriptionGate> } />
+                    <Route path=path!("/standards") view=|| view! { <SubscriptionGate><Standards /></SubscriptionGate> } />
+                    <Route path=path!("/records") view=|| view! { <SubscriptionGate><Records /></SubscriptionGate> } />
+                    <Route path=path!("/results") view=|| view! { <SubscriptionGate><Results /></SubscriptionGate> } />
+                    <Route path=path!("/rankings") view=|| view! { <SubscriptionGate><Rankings /></SubscriptionGate> } />
                     <Route path=path!("/privacy") view=PrivacyPage />
                     <Route path=path!("/terms") view=TermsPage />
                 </Routes>

@@ -10,6 +10,30 @@
     {
       "source": "/terms",
       "destination": "/index.html"
+    },
+    {
+      "source": "/comp-data",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/qualifying-totals",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/standards",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/records",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/results",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/rankings",
+      "destination": "/index.html"
     }
   ]
 }

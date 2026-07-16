@@ -1285,6 +1285,8 @@ dependencies = [
  "serde",
  "serde_json",
  "strum",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
