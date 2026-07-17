@@ -376,6 +376,85 @@ main > div:has(> h4) > p {
     color: var(--text-secondary);
 }
 
+/* ---------- App Store reviews ---------- */
+
+.reviews-section {
+    width: min(1120px, 100%);
+    margin: clamp(88px, 14vh, 150px) auto 0;
+    text-align: center;
+}
+
+.reviews-eyebrow {
+    margin: 0 0 12px;
+    color: var(--accent);
+    font-size: 0.78rem;
+    font-weight: 750;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+}
+
+.reviews-section h2 {
+    margin: 0 auto 34px;
+    max-width: 18ch;
+    font-size: clamp(1.7rem, 3.8vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+}
+
+.review-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+
+.review-card {
+    display: flex;
+    min-height: 250px;
+    flex-direction: column;
+    margin: 0;
+    padding: 24px;
+    text-align: left;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: var(--shadow-sm);
+}
+
+.review-stars {
+    color: #ffb400;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    line-height: 1;
+}
+
+.review-card blockquote {
+    flex: 1;
+    margin: 18px 0 24px;
+    color: var(--text);
+    font-size: clamp(1rem, 1.8vw, 1.15rem);
+    font-weight: 650;
+    letter-spacing: -0.015em;
+    line-height: 1.42;
+}
+
+.review-card figcaption {
+    display: grid;
+    gap: 4px;
+}
+
+.review-card strong {
+    color: var(--text);
+    font-size: 0.92rem;
+    line-height: 1.25;
+}
+
+.review-card span {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
 /* ---------- Highlight band ("Throw Out the PDFs") ---------- */
 
 .highlight-section {
@@ -631,6 +710,14 @@ main main a:hover {
 
     main > div:has(> h4) {
         margin: 8px 0;
+    }
+
+    .review-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .review-card {
+        min-height: auto;
     }
 
     .highlight-section {

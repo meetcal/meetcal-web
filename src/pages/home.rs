@@ -8,6 +8,7 @@ pub fn Home() -> impl IntoView {
         <Header />
         <TitleSection />
         <BodySection />
+        <ReviewsSection />
         <HighlightSection />
         <Footer />
     }
@@ -42,6 +43,51 @@ pub fn BodySection() -> impl IntoView {
         <FeatureSection title="Smart Filtering" subtitle="Filter by weight class, platform, or club to find exactly what you need." />
 
         <FeatureSection title="Cross-Platform" subtitle="Available on both iOS and Android, supporting both mobile and tablets." />
+    }
+}
+
+#[component]
+pub fn ReviewsSection() -> impl IntoView {
+    let reviews = [
+        (
+            "So useful for athlete and coach!",
+            "This app really has it all and has gotten better with every update.",
+            "pandora user music lover",
+        ),
+        (
+            "This is going to be a lifesaver",
+            "Athlete forget to tell you when they're lifting? Easy!",
+            "briddreamr",
+        ),
+        (
+            "Should be mandatory for all USAW coaches.",
+            "As long as I have this app on my phone, I will set all my athletes up for incredible days.",
+            "BrittanyRucker",
+        ),
+        (
+            "Filling a much-needed gap in USAW's event experience",
+            "Can't thank him enough for the ease this provides during national meets.",
+            "Jacobpennerweightlifting",
+        ),
+    ];
+
+    view! {
+        <section class="reviews-section" aria-labelledby="reviews-heading">
+            <p class="reviews-eyebrow">"App Store Reviews"</p>
+            <h2 id="reviews-heading">"Trusted on meet day"</h2>
+            <div class="review-grid">
+                {reviews.iter().map(|(title, quote, author)| view! {
+                    <figure class="review-card">
+                        <div class="review-stars" aria-label="5 out of 5 stars">"5.0"</div>
+                        <blockquote>"\"" {*quote} "\""</blockquote>
+                        <figcaption>
+                            <strong>{*title}</strong>
+                            <span>{*author}</span>
+                        </figcaption>
+                    </figure>
+                }).collect_view()}
+            </div>
+        </section>
     }
 }
 
