@@ -6,6 +6,8 @@
     {
       "source": "/api/:path*",
       "destination": "https://api.meetcal.app/:path*"
+      "source": "/features",
+      "destination": "/index.html"
     },
     {
       "source": "/privacy",

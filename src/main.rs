@@ -12,6 +12,9 @@ use meetcal_web::pages::{
     terms::TermsPage,
 };
 use meetcal_web::{auth::provide_auth, components::subscription_gate::SubscriptionGate};
+    features::FeaturesPage, home::Home, not_found::NotFound, privacy::PrivacyPage,
+    terms::TermsPage,
+};
 
 fn main() {
     leptos::mount::mount_to_body(App)
@@ -32,6 +35,7 @@ fn App() -> impl IntoView {
                     <Route path=path!("/records") view=|| view! { <SubscriptionGate><Records /></SubscriptionGate> } />
                     <Route path=path!("/results") view=|| view! { <SubscriptionGate><Results /></SubscriptionGate> } />
                     <Route path=path!("/rankings") view=|| view! { <SubscriptionGate><Rankings /></SubscriptionGate> } />
+                    <Route path=path!("/features") view=FeaturesPage />
                     <Route path=path!("/privacy") view=PrivacyPage />
                     <Route path=path!("/terms") view=TermsPage />
                 </Routes>

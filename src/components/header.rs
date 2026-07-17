@@ -25,6 +25,7 @@ pub fn Header() -> impl IntoView {
                         <A href="/records">"Records"</A>
                     </div>
                 </div>
+                <A href="/features">"Features"</A>
                 <A href="/privacy">"Privacy"</A>
                 <A href="/terms">"Terms"</A>
                 <A href="mailto:maddisen@meetcal.app">"Contact Us"</A>
