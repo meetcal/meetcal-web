@@ -404,7 +404,7 @@ main > div:has(> h4) > p {
 
 .review-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
     align-items: stretch;
 }
