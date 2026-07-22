@@ -780,6 +780,114 @@ a {
         var(--shadow-sm);
 }
 
+/* ---------- Referral invite landing ---------- */
+
+.invite-hero {
+    width: min(680px, calc(100% - 40px));
+    margin: 0 auto;
+    padding: clamp(56px, 11vh, 120px) 0 clamp(48px, 8vh, 80px);
+    text-align: center;
+}
+
+.invite-hero h1 {
+    font-size: clamp(2.2rem, 6vw, 3.6rem);
+    font-weight: 800;
+    letter-spacing: -0.045em;
+    line-height: 1.06;
+    margin: 0 auto 20px;
+}
+
+.invite-copy {
+    font-size: clamp(1.02rem, 1.5vw, 1.18rem);
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-width: 52ch;
+    margin: 0 auto;
+}
+
+.invite-code-card {
+    margin: 36px auto 32px;
+    padding: clamp(22px, 4vw, 30px);
+    max-width: 460px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background:
+        radial-gradient(circle at 90% 0%, rgba(0, 122, 255, 0.13), transparent 45%),
+        var(--card);
+    box-shadow: var(--shadow-lg);
+}
+
+.invite-code-label {
+    margin: 0 0 14px;
+    color: var(--text-secondary);
+    font-size: 0.82rem;
+    font-weight: 650;
+}
+
+.invite-code-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 64px;
+    padding: 12px 52px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--text) 6%, var(--card));
+}
+
+.invite-code-value {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    font-size: clamp(1.5rem, 5vw, 2rem);
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    color: var(--text);
+    overflow-wrap: anywhere;
+}
+
+.copy-command-button.invite-copy-button {
+    top: 50%;
+    right: 14px;
+    width: 34px;
+    height: 34px;
+    transform: translateY(-50%);
+}
+
+.copy-command-button.invite-copy-button svg {
+    width: 17px;
+    height: 17px;
+}
+
+.copy-command-button.invite-copy-button .is-hidden {
+    opacity: 0;
+    transform: scale(0.65);
+}
+
+.invite-open-link {
+    display: inline-block;
+    margin-top: 18px;
+    color: var(--accent);
+    font-size: 0.92rem;
+    font-weight: 650;
+}
+
+.invite-open-link:hover {
+    text-decoration: underline;
+}
+
+.invite-store-links {
+    justify-content: center;
+    margin: 8px auto 0;
+}
+
+.invite-note {
+    max-width: 46ch;
+    margin: 28px auto 0;
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
 /* ---------- Ways to use MeetCal ---------- */
 
 .interaction-section {
