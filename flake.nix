@@ -13,7 +13,7 @@
           default = pkgs.mkShell {
             packages = with pkgs; [
               rustc cargo clippy rustfmt rust-analyzer cargo-audit
-              trunk wasm-bindgen-cli binaryen pkg-config git just
+              trunk leptosfmt wasm-bindgen-cli binaryen pkg-config git just
             ];
             shellHook = ''echo "Nix dev shell: MeetCal web"'';
           };
