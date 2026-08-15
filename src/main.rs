@@ -8,6 +8,7 @@ use meetcal_web::pages::{
     },
     features::FeaturesPage,
     home::Home,
+    invite::InvitePage,
     not_found::NotFound,
     privacy::PrivacyPage,
     terms::TermsPage,
@@ -34,6 +35,8 @@ fn App() -> impl IntoView {
                     <Route path=path!("/results") view=|| view! { <SubscriptionGate><Results /></SubscriptionGate> } />
                     <Route path=path!("/rankings") view=|| view! { <SubscriptionGate><Rankings /></SubscriptionGate> } />
                     <Route path=path!("/features") view=FeaturesPage />
+                    <Route path=path!("/invite") view=InvitePage />
+                    <Route path=path!("/invite/:code") view=InvitePage />
                     <Route path=path!("/privacy") view=PrivacyPage />
                     <Route path=path!("/terms") view=TermsPage />
                 </Routes>
