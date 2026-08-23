@@ -422,6 +422,19 @@ a {
 .data-metric { min-width: 0; padding: 17px; border: 1px solid var(--border); border-radius: 13px; background: var(--card); box-shadow: var(--shadow-sm); }
 .data-metric span { display: block; margin-bottom: 7px; color: var(--text-secondary); font-size: 0.76rem; font-weight: 750; letter-spacing: 0.04em; text-transform: uppercase; }
 .data-metric strong { display: block; overflow-wrap: anywhere; font-size: 1.3rem; line-height: 1.15; }
+.wrapped-top-meet { margin-top: 12px; padding: 17px; border: 1px solid var(--border); border-radius: 13px; background: var(--card); box-shadow: var(--shadow-sm); }
+.wrapped-top-meet span { display: block; margin-bottom: 7px; color: var(--text-secondary); font-size: 0.76rem; font-weight: 750; letter-spacing: 0.04em; text-transform: uppercase; }
+.wrapped-top-meet strong { display: block; font-size: 1.15rem; line-height: 1.3; }
+.meet-search { position: relative; width: min(620px, 100%); }
+.meet-search > label { display: block; margin-bottom: 5px; color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; }
+.meet-search .data-filter { width: 100%; }
+.meet-suggestions { position: absolute; z-index: 5; top: calc(100% + 6px); width: 100%; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--card); box-shadow: var(--shadow); }
+.meet-suggestions button { display: block; width: 100%; padding: 11px 13px; border-bottom: 1px solid var(--border); color: var(--text); text-align: left; }
+.meet-suggestions button:last-child { border-bottom: 0; }
+.meet-suggestions button:hover, .meet-suggestions button:focus { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
+.meet-suggestions p { margin: 0; padding: 11px 13px; color: var(--text-secondary); }
+.data-athlete-link { color: var(--accent); font-weight: 700; text-decoration: none; }
+.data-athlete-link:hover { text-decoration: underline; }
 
 .header-actions {
     display: flex;

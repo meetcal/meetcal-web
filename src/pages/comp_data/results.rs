@@ -1,10 +1,11 @@
-use super::{TableSkeleton, models::attempt, yes_no};
+use super::{TableSkeleton, format_us_date, models::attempt, yes_no};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response_with_query,
 };
 use js_sys::Date;
 use leptos::prelude::*;
+use leptos_router::hooks::use_query_map;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize)]
@@ -60,8 +61,19 @@ struct LiftingResult {
 
 #[component]
 pub fn Results() -> impl IntoView {
-    let (name, set_name) = signal(String::new());
-    let (request, set_request) = signal(None::<SearchQuery>);
+    let initial_name = use_query_map()
+        .with_untracked(|params| params.get("athlete"))
+        .unwrap_or_default();
+    let initial_request = (!initial_name.is_empty()).then(|| {
+        let (start_date, end_date) = search_date_range();
+        SearchQuery {
+            query: initial_name.clone(),
+            start_date,
+            end_date,
+        }
+    });
+    let (name, set_name) = signal(initial_name);
+    let (request, set_request) = signal(initial_request);
     let (sort, set_sort) = signal("date_desc".to_string());
 
     let results = LocalResource::new(move || {
@@ -104,6 +116,7 @@ pub fn Results() -> impl IntoView {
                 <input
                     class="data-filter"
                     placeholder="Athlete name"
+                    prop:value=move || name.get()
                     on:input=move |event| set_name.set(event_target_value(&event))
                 />
                 <button class="data-search-button" type="submit">"Search"</button>
@@ -148,7 +161,7 @@ pub fn Results() -> impl IntoView {
                         .map(|row| {
                             view! {
                                 <tr>
-                                    <td>{row.date.clone()}</td>
+                                    <td>{format_us_date(&row.date)}</td>
                                     <td>{row.meet.clone()}</td>
                                     <td>{row.age.clone()}</td>
                                     <td>{row.body_weight}</td>

@@ -50,7 +50,7 @@ pub fn metadata_for_path(path: &str) -> PageMetadata {
         "/meet-center" => competition_metadata("Weightlifting Meets, Schedules & Results"),
         "/club-dashboard" => competition_metadata("Weightlifting Club Meet Dashboard"),
         "/wso-dashboard" => competition_metadata("USAW WSO Meet Dashboard"),
-        "/wrapped" => competition_metadata("Weightlifting Wrapped & Athlete Comparisons"),
+        "/wrapped" => competition_metadata("Weightlifting Athlete Wrapped"),
         _ => PageMetadata {
             title: "Page Not Found — MeetCal",
             description: "The requested MeetCal page could not be found.",

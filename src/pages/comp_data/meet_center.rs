@@ -1,5 +1,7 @@
+use std::collections::HashSet;
+
 use super::{
-    EmptyTableRow, SelectOptions, TableSkeleton,
+    EmptyTableRow, TableSkeleton, format_us_date, format_us_time,
     models::{Athlete, LiftingResult, Meet, MeetQuery, ScheduleRow, attempt},
     yes_no,
 };
@@ -24,6 +26,7 @@ fn session(value: Option<f64>) -> String {
 #[component]
 pub fn MeetCenter() -> impl IntoView {
     let (meet, set_meet) = signal(String::new());
+    let (meet_search, set_meet_search) = signal(String::new());
     let upcoming = LocalResource::new(|| async { get_api_response::<Meet>("/meets").await });
     let completed =
         LocalResource::new(|| async { get_api_response::<Meet>("/meets/completed").await });
@@ -40,21 +43,39 @@ pub fn MeetCenter() -> impl IntoView {
         <section class="data-page">
             <p class="data-eyebrow">"Competition data"</p>
             <h1>"Meets"</h1>
-            <p class="data-intro">"Open a meet to see its venue, session schedule, start list, and complete results."</p>
-            {move || upcoming.with(|upcoming_response| completed.with(|completed_response| match (upcoming_response, completed_response) {
+            <p class="data-intro">"Search all meets to see venue details, session schedules, start lists, and published results."</p>
+            {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) {
                 (Some(Ok(upcoming)), Some(Ok(completed))) => {
-                    let mut all = upcoming.iter().chain(completed.iter()).collect::<Vec<_>>();
-                    all.sort_by(|left, right| right.start_date.cmp(&left.start_date));
-                    let names = all.iter().map(|row| row.name.clone()).collect::<Vec<_>>();
-                    let selected = all.into_iter().find(|row| row.name == meet.get()).cloned();
+                    let mut meets = upcoming.iter().chain(completed.iter()).cloned().collect::<Vec<_>>();
+                    meets.sort_by(|left, right| right.start_date.cmp(&left.start_date).then_with(|| left.name.cmp(&right.name)));
+                    let mut seen = HashSet::new();
+                    meets.retain(|row| seen.insert(row.name.clone()));
+                    let query = meet_search.get();
+                    let normalized_query = query.trim().to_lowercase();
+                    let suggestions = (normalized_query.chars().count() >= 3 && meet.get().is_empty()).then(|| {
+                        meets
+                            .iter()
+                            .filter(|row| row.name.to_lowercase().contains(&normalized_query))
+                            .take(8)
+                            .map(|row| row.name.clone())
+                            .collect::<Vec<_>>()
+                    });
+                    let selected = meets.iter().find(|row| row.name == meet.get()).cloned();
                     view! {
-                        <div class="data-filters"><label>"Meet"<select class="data-filter data-filter-wide" on:change=move |event| set_meet.set(event_target_value(&event))>
-                            <option value="">"Choose a meet"</option><SelectOptions values=names selected=Some(meet.get()) />
-                        </select></label></div>
+                        <div class="meet-search">
+                            <label for="meet-search-input">"Meet"</label>
+                            <input id="meet-search-input" class="data-filter data-filter-wide" type="search" autocomplete="off" placeholder="Type at least 3 characters" prop:value=move || meet_search.get() on:input=move |event| { let value = event_target_value(&event); set_meet_search.set(value.clone()); if meet.get() != value { set_meet.set(String::new()); } } />
+                            {suggestions.map(|matches| view! {
+                                <div class="meet-suggestions" role="listbox" aria-label="Meet suggestions">
+                                    {matches.is_empty().then(|| view! { <p>"No matching meets"</p> })}
+                                    {matches.into_iter().map(|name| { let selected_name = name.clone(); view! { <button type="button" role="option" on:click=move |_| { set_meet_search.set(selected_name.clone()); set_meet.set(selected_name.clone()); }>{name}</button> } }).collect_view()}
+                                </div>
+                            })}
+                        </div>
                         {selected.map(|row| view! {
                             <article class="meet-summary">
                                 <div><span class="data-badge">{row.status}</span><h2>{row.name}</h2>
-                                <p>{format!("{} – {} · {}", row.start_date, row.end_date, row.time_zone)}</p>
+                                <p>{format!("{} – {} · {}", format_us_date(&row.start_date), format_us_date(&row.end_date), row.time_zone)}</p>
                                 <p>{format!("{}, {} · {}, {} {}", row.venue_name, row.venue_street, row.venue_city, row.venue_state, row.venue_zip)}</p></div>
                                 <div class="meet-links">
                                     {row.venue_map_apple_url.map(|url| view! { <a href=url target="_blank" rel="noopener noreferrer">"Open venue map"</a> })}
@@ -68,7 +89,7 @@ pub fn MeetCenter() -> impl IntoView {
                 _ => view! { <p class="data-status">"Loading meets…"</p> }.into_any(),
             }))}
 
-            {move || if meet.get().is_empty() { view! { <p class="data-status">"Choose a meet to load its competition data."</p> }.into_any() } else { view! {
+            {move || if meet.get().is_empty() { view! { <p class="data-status">"Search for and select a meet to load its competition data."</p> }.into_any() } else { view! {
                 <h2 class="data-section-title">"Schedule"</h2>
                 {move || schedule.with(|response| table_schedule(response.as_ref()))}
                 <h2 class="data-section-title">"Start list"</h2>
@@ -101,7 +122,7 @@ fn table_schedule(response: Option<&Result<Vec<ScheduleRow>, String>>) -> AnyVie
                 .into_any()
         }
         Some(Ok(rows)) => {
-            let body = rows.iter().map(|row| view! { <tr><td>{row.date.clone()}</td><td>{session(Some(row.session_id))}</td><td>{row.platform.clone()}</td><td>{row.weight_class.clone()}</td><td>{row.weigh_in_time.clone()}</td><td>{row.start_time.clone()}</td></tr> }).collect_view();
+            let body = rows.iter().map(|row| view! { <tr><td>{format_us_date(&row.date)}</td><td>{session(Some(row.session_id))}</td><td>{row.platform.clone()}</td><td>{row.weight_class.clone()}</td><td>{format_us_time(&row.weigh_in_time)}</td><td>{format_us_time(&row.start_time)}</td></tr> }).collect_view();
             view! { <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Date"</th><th>"Session"</th><th>"Platform"</th><th>"Weight class"</th><th>"Weigh-in"</th><th>"Start"</th></tr></thead><tbody>{rows.is_empty().then(|| view! { <EmptyTableRow columns=6 message="No schedule has been published for this meet." /> })}{body}</tbody></table></div> }.into_any()
         }
     }
@@ -119,7 +140,7 @@ fn table_results(response: Option<&Result<Vec<LiftingResult>, String>>) -> AnyVi
     match response {
         None => view! { <TableSkeleton columns=13 /> }.into_any(),
         Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load meet results: {error}")}</p> }.into_any(),
-        Some(Ok(rows)) => { let mut rows = rows.iter().collect::<Vec<_>>(); rows.sort_by(|left, right| right.total.total_cmp(&left.total)); let body = rows.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.age.clone()}</td><td>{row.body_weight}</td><td>{attempt(row.snatch1)}</td><td>{attempt(row.snatch2)}</td><td>{attempt(row.snatch3)}</td><td>{row.snatch_best}</td><td>{attempt(row.cj1)}</td><td>{attempt(row.cj2)}</td><td>{attempt(row.cj3)}</td><td>{row.cj_best}</td><td>{row.total}</td><td>{yes_no(row.adaptive)}</td></tr> }).collect_view(); view! { <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Division"</th><th>"Bodyweight"</th><th>"S1"</th><th>"S2"</th><th>"S3"</th><th>"Best snatch"</th><th>"C&J 1"</th><th>"C&J 2"</th><th>"C&J 3"</th><th>"Best C&J"</th><th>"Total"</th><th>"Adaptive"</th></tr></thead><tbody>{rows.is_empty().then(|| view! { <EmptyTableRow columns=13 message="No results have been published for this meet." /> })}{body}</tbody></table></div> }.into_any() }
+        Some(Ok(rows)) => { let mut rows = rows.iter().collect::<Vec<_>>(); rows.sort_by(|left, right| right.total.total_cmp(&left.total)); let body = rows.iter().map(|row| { let athlete_url = format!("/results?athlete={}", js_sys::encode_uri_component(&row.name)); view! { <tr><td><a class="data-athlete-link" href=athlete_url>{row.name.clone()}</a></td><td><strong>{row.total}</strong></td><td>{row.age.clone()}</td><td>{row.body_weight}</td><td>{attempt(row.snatch1)}</td><td>{attempt(row.snatch2)}</td><td>{attempt(row.snatch3)}</td><td>{row.snatch_best}</td><td>{attempt(row.cj1)}</td><td>{attempt(row.cj2)}</td><td>{attempt(row.cj3)}</td><td>{row.cj_best}</td><td>{yes_no(row.adaptive)}</td></tr> } }).collect_view(); view! { <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Total"</th><th>"Division"</th><th>"Bodyweight"</th><th>"S1"</th><th>"S2"</th><th>"S3"</th><th>"Best snatch"</th><th>"C&J 1"</th><th>"C&J 2"</th><th>"C&J 3"</th><th>"Best C&J"</th><th>"Adaptive"</th></tr></thead><tbody>{rows.is_empty().then(|| view! { <EmptyTableRow columns=13 message="No results have been published for this meet." /> })}{body}</tbody></table></div> }.into_any() }
     }
 }
 

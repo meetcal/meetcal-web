@@ -24,7 +24,7 @@ pub fn Header() -> impl IntoView {
                         <A href="/meet-center">"Meets"</A>
                         <A href="/club-dashboard">"Club Dashboard"</A>
                         <A href="/wso-dashboard">"WSO Dashboard"</A>
-                        <A href="/wrapped">"Wrapped & Compare"</A>
+                        <A href="/wrapped">"Athlete Wrapped"</A>
                         <A href="/rankings">"Rankings"</A>
                         <A href="/national-rankings">"National Rankings"</A>
                         <A href="/records">"Records"</A>

@@ -293,20 +293,40 @@ test("athlete results show every competition field except federation", async ({ 
 
 test("meet center joins details, schedule, start list, and full results", async ({ page }) => {
   await mockSubscribedUser(page);
-  await page.route("**/meets", (route) => route.fulfill(jsonResponse([])));
-  await page.route("**/meets/completed", (route) => route.fulfill(jsonResponse([completedMeet])));
+  await page.route("**/meets", (route) => route.fulfill(jsonResponse([
+    { ...completedMeet, status: "scheduled" },
+    { ...completedMeet, name: "Later Meet", start_date: "2026-08-20", end_date: "2026-08-21", status: "registration" },
+  ])));
+  await page.route("**/meets/completed", (route) => route.fulfill(jsonResponse([
+    { ...completedMeet, name: "Past Meet", start_date: "2025-05-01", end_date: "2025-05-02" },
+  ])));
   await page.route("**/meets/schedule?**", (route) => route.fulfill(jsonResponse([{ date: "2026-06-20", meet: "Test Meet", platform: "Red", session_id: 1, start_time: "10:00", weigh_in_time: "08:00", weight_class: "69kg" }])));
   await page.route("**/meets/athletes-sessions?**", (route) => route.fulfill(jsonResponse([{ member_id: "1", name: "Test Athlete", age: 27, club: "Test Barbell", wso: "California North", gender: "Women", weight_class: "69kg", entry_total: 220, adaptive: false, session_number: 1, session_platform: "Red", date: "2026-06-20", start_time: "10:00", weigh_in_time: "08:00" }])));
   await page.route("**/lifting-results?**", (route) => route.fulfill(jsonResponse([completeResult])));
+  await page.route("**/search?**", (route) => route.fulfill(jsonResponse({ matched_name: "Test Athlete", suggestions: [], results: [completeResult] })));
   await page.goto("/meet-center");
-  await page.getByRole("combobox", { name: "Meet" }).selectOption("Test Meet");
+  const meetSearch = page.getByRole("searchbox", { name: "Meet" });
+  await meetSearch.fill("me");
+  await expect(page.getByRole("listbox", { name: "Meet suggestions" })).toHaveCount(0);
+  await meetSearch.fill("mee");
+  await expect(page.getByRole("option")).toHaveText(["Later Meet", "Test Meet", "Past Meet"]);
+  await page.getByRole("option", { name: "Test Meet" }).click();
 
+  await expect(page.getByText("scheduled", { exact: true })).toBeVisible();
   await expect(page.getByText("Test Arena", { exact: false })).toBeVisible();
+  await expect(page.getByText(/June 20, 2026.*June 20, 2026/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Schedule" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Start list" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Full results" })).toBeVisible();
+  await expect(page.locator("tbody").first()).toContainText("June 20, 2026");
+  await expect(page.locator("tbody").first()).toContainText("8:00 AM");
+  await expect(page.locator("tbody").first()).toContainText("10:00 AM");
   await expect(page.locator("tbody").nth(1)).toContainText("Test Athlete");
   await expect(page.locator("tbody").nth(2)).toContainText("Test Athlete");
+  await expect(page.getByRole("columnheader").filter({ hasText: /^Total$/ })).toBeVisible();
+  await page.getByRole("link", { name: "Test Athlete" }).click();
+  await expect(page).toHaveURL(/\/results\?athlete=Test%20Athlete$/);
+  await expect(page.getByText("Results for")).toBeVisible();
 });
 
 test("club and WSO dashboards expose meet performance metrics", async ({ page }) => {
@@ -322,6 +342,7 @@ test("club and WSO dashboards expose meet performance metrics", async ({ page })
 
   await page.route("**/meets", (route) => route.fulfill(jsonResponse([])));
   await page.route("**/meets/completed", (route) => route.fulfill(jsonResponse([completedMeet])));
+  await page.route("**/data/wso", (route) => route.fulfill(jsonResponse(["California North"])));
   await page.route("**/meets/athletes?**", (route) => route.fulfill(jsonResponse([{ member_id: "1", meet: "Test Meet", name: "Test Athlete", age: 27, club: "Test Barbell", wso: "California North", gender: "Women", weight_class: "69kg", entry_total: 220, adaptive: false, session_number: 1, session_platform: "Red" }])));
   await page.route("**/lifting-results?**", (route) => route.fulfill(jsonResponse([completeResult])));
   await page.goto("/wso-dashboard");
@@ -331,22 +352,21 @@ test("club and WSO dashboards expose meet performance metrics", async ({ page })
   await expect(page.locator("tbody")).toContainText("225");
 });
 
-test("wrapped supports yearly athlete comparisons", async ({ page }) => {
+test("wrapped builds a readable single-athlete yearly recap", async ({ page }) => {
   await mockSubscribedUser(page);
   await page.route("**/search?**", async (route) => {
     const name = new URL(route.request().url()).searchParams.get("query") ?? "";
-    const result = { ...completeResult, name, total: name === "Second Athlete" ? 235 : 225 };
+    const result = { ...completeResult, name, meet: "Athletic Lab Weightlifting Club 2026 March Madness Weightlifting Meet" };
     await route.fulfill(jsonResponse({ matched_name: name, suggestions: [], results: [result] }));
   });
   await page.goto("/wrapped");
   await page.getByLabel("Athlete", { exact: true }).fill("Test Athlete");
-  await page.getByLabel("Compare with (optional)").fill("Second Athlete");
   await page.getByLabel("Year").fill("2026");
   await page.getByRole("button", { name: "Build wrapped" }).click();
 
   await expect(page.getByRole("heading", { name: "2026 wrapped — Test Athlete" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Comparison", exact: true })).toBeVisible();
-  await expect(page.getByRole("columnheader", { name: "Second Athlete" })).toBeVisible();
+  await expect(page.getByLabel("Compare with (optional)")).toHaveCount(0);
+  await expect(page.locator(".wrapped-top-meet")).toContainText("Athletic Lab Weightlifting Club 2026 March Madness Weightlifting Meet");
 });
 
 test("legal pages expose the declared privacy services and cross-link", async ({ page }) => {

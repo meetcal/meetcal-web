@@ -38,8 +38,8 @@ pub fn CompData() -> impl IntoView {
                     <p>"Participation, make rates, lifted volume, and results for a selected WSO."</p>
                 </A>
                 <A href="/wrapped" attr:class="data-card">
-                    <h2>"Wrapped & Compare"</h2>
-                    <p>"Yearly athlete recaps and side-by-side performance comparisons."</p>
+                    <h2>"Athlete Wrapped"</h2>
+                    <p>"Yearly athlete recaps with best lifts, make rate, and progress."</p>
                 </A>
                 <A href="/rankings" attr:class="data-card">
                     <h2>"Rankings"</h2>
