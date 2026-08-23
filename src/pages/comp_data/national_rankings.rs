@@ -106,11 +106,6 @@ fn division_options(gender: &str, age_group: &str) -> Vec<String> {
 
 #[component]
 pub fn NationalRankings() -> impl IntoView {
-    let (federation, set_federation) = signal("USAW".to_owned());
-    let (gender, set_gender) = signal("Men".to_owned());
-    let (age_group, set_age_group) = signal("Senior".to_owned());
-    let (division, set_division) = signal("Open Men's 60kg".to_owned());
-    let (year, set_year) = signal(String::new());
     let (request, set_request) = signal(None::<NationalRankingQuery>);
 
     let rankings = LocalResource::new(move || {
@@ -137,7 +132,7 @@ pub fn NationalRankings() -> impl IntoView {
             heading="National rankings"
             intro="Find each athlete’s best total for a USAW or USAMW division. Add a year to limit the rankings to that season."
         >
-            <NationalRankingsForm federation set_federation gender set_gender age_group set_age_group division set_division year set_year set_request />
+            <NationalRankingsForm set_request />
             <p class="data-help">"Division choices match the gender, age group, and weight classes used in the MeetCal app."</p>
 
             {move || rankings.with(|response| match response {
@@ -153,19 +148,13 @@ pub fn NationalRankings() -> impl IntoView {
 }
 
 #[component]
-fn NationalRankingsForm(
-    federation: ReadSignal<String>,
-    set_federation: WriteSignal<String>,
-    gender: ReadSignal<String>,
-    set_gender: WriteSignal<String>,
-    age_group: ReadSignal<String>,
-    set_age_group: WriteSignal<String>,
-    division: ReadSignal<String>,
-    set_division: WriteSignal<String>,
-    year: ReadSignal<String>,
-    set_year: WriteSignal<String>,
-    set_request: WriteSignal<Option<NationalRankingQuery>>,
-) -> impl IntoView {
+fn NationalRankingsForm(set_request: WriteSignal<Option<NationalRankingQuery>>) -> impl IntoView {
+    let (federation, set_federation) = signal("USAW".to_owned());
+    let (gender, set_gender) = signal("Men".to_owned());
+    let (age_group, set_age_group) = signal("Senior".to_owned());
+    let (division, set_division) = signal("Open Men's 60kg".to_owned());
+    let (year, set_year) = signal(String::new());
+
     view! {
         <form class="data-query-form" on:submit=move |event| {
             event.prevent_default();
