@@ -132,9 +132,29 @@ fn medal(value: &Option<String>) -> String {
         })
         .unwrap_or_else(|| "—".to_owned())
 }
+
+fn dashboard_metrics(stats: &MeetStats) -> Vec<(&'static str, String)> {
+    vec![
+        ("Athletes", stats.total_athletes.to_string()),
+        ("Gold medals", stats.gold_medals.to_string()),
+        ("Silver medals", stats.silver_medals.to_string()),
+        ("Bronze medals", stats.bronze_medals.to_string()),
+        ("Total PRs", stats.total_prs.to_string()),
+        ("6 for 6", stats.perfect_6_for_6.to_string()),
+        ("Weight lifted", format!("{}kg", stats.total_weight_lifted)),
+        ("Snatch makes", format!("{}%", stats.snatch_make_rate)),
+        ("C&J makes", format!("{}%", stats.cj_make_rate)),
+        ("Combined makes", format!("{}%", stats.combined_make_rate)),
+    ]
+}
+
 fn dashboard(stats: &MeetStats) -> AnyView {
+    let metrics = dashboard_metrics(stats)
+        .into_iter()
+        .map(|(label, value)| view! { <DataMetric label value /> })
+        .collect_view();
     let rows = stats.athlete_results.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.weight_class.clone()}</td><td>{row.body_weight}</td><td>{row.snatch_best}</td><td>{medal(&row.snatch_medal)}</td><td>{row.cj_best}</td><td>{medal(&row.cj_medal)}</td><td>{row.total}</td><td>{medal(&row.total_medal)}</td><td>{yes_no(row.is_pr)}</td><td>{yes_no(row.perfect_lifts)}</td></tr> }).collect_view();
-    view! { <div class="data-metric-grid"><DataMetric label="Athletes" value=stats.total_athletes.to_string() /><DataMetric label="Gold medals" value=stats.gold_medals.to_string() /><DataMetric label="Silver medals" value=stats.silver_medals.to_string() /><DataMetric label="Bronze medals" value=stats.bronze_medals.to_string() /><DataMetric label="Total PRs" value=stats.total_prs.to_string() /><DataMetric label="6 for 6" value=stats.perfect_6_for_6.to_string() /><DataMetric label="Weight lifted" value=format!("{}kg", stats.total_weight_lifted) /><DataMetric label="Snatch makes" value=format!("{}%", stats.snatch_make_rate) /><DataMetric label="C&J makes" value=format!("{}%", stats.cj_make_rate) /><DataMetric label="Combined makes" value=format!("{}%", stats.combined_make_rate) /></div>
+    view! { <div class="data-metric-grid">{metrics}</div>
     <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Class"</th><th>"Bodyweight"</th><th>"Snatch"</th><th>"Snatch medal"</th><th>"C&J"</th><th>"C&J medal"</th><th>"Total"</th><th>"Total medal"</th><th>"PR"</th><th>"6 for 6"</th></tr></thead><tbody>{stats.athlete_results.is_empty().then(|| view! { <EmptyTableRow columns=11 message="No club results were found for this meet." /> })}{rows}</tbody></table></div> }.into_any()
 }
 
@@ -153,5 +173,13 @@ mod tests {
         assert_eq!(medal(&Some("silver".to_owned())), "Silver");
         assert_eq!(medal(&Some("bronze".to_owned())), "Bronze");
         assert_eq!(medal(&None), "—");
+    }
+
+    #[test]
+    fn dashboard_metrics_have_stable_labels_and_units() {
+        let stats: MeetStats = serde_json::from_str(r#"{"total_athletes":1,"gold_medals":1,"silver_medals":0,"bronze_medals":0,"total_prs":1,"perfect_6_for_6":0,"total_weight_lifted":225.0,"snatch_make_rate":67,"cj_make_rate":67,"combined_make_rate":67,"athlete_results":[]}"#).unwrap();
+        let metrics = dashboard_metrics(&stats);
+        assert_eq!(metrics.first(), Some(&("Athletes", "1".to_owned())));
+        assert!(metrics.contains(&("Weight lifted", "225kg".to_owned())));
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::{
     DataMetric, EmptyTableRow, SelectOptions, TableSkeleton,
@@ -32,6 +32,40 @@ pub fn WsoDashboard() -> impl IntoView {
 }
 
 fn dashboard(athletes: &[Athlete], results: &[LiftingResult], selected_wso: &str) -> AnyView {
+    let WsoDashboardData {
+        meet_athletes,
+        wso_athletes,
+        attempts,
+        rows,
+    } = build_dashboard_data(athletes, results, selected_wso);
+    let rows = rows.into_iter().map(|row| view! { <tr><td>{row.name}</td><td>{row.gender}</td><td>{row.weight_class}</td><td>{row.club}</td><td>{row.entry_total}</td><td>{row.snatch_best}</td><td>{row.cj_best}</td><td>{row.total}</td></tr> }).collect_view();
+    view! { <div class="data-metric-grid"><DataMetric label="Meet athletes" value=meet_athletes.to_string() /><DataMetric label="WSO athletes" value=wso_athletes.to_string() /><DataMetric label="Snatch makes" value=format!("{:.1}%", percentage(attempts.snatch_makes, attempts.snatch_attempts)) /><DataMetric label="C&J makes" value=format!("{:.1}%", percentage(attempts.cj_makes, attempts.cj_attempts)) /><DataMetric label="Combined makes" value=format!("{:.1}%", percentage(attempts.makes(), attempts.attempts())) /><DataMetric label="Weight lifted" value=format!("{}kg", attempts.volume) /></div>
+    <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Gender"</th><th>"Class"</th><th>"Club"</th><th>"Entry total"</th><th>"Snatch"</th><th>"C&J"</th><th>"Total"</th></tr></thead><tbody>{(wso_athletes == 0).then(|| view! { <EmptyTableRow columns=8 message="No athletes from this WSO were found at the meet." /> })}{rows}</tbody></table></div> }.into_any()
+}
+
+struct WsoAthleteRow {
+    name: String,
+    gender: String,
+    weight_class: String,
+    club: String,
+    entry_total: f64,
+    snatch_best: f64,
+    cj_best: f64,
+    total: f64,
+}
+
+struct WsoDashboardData {
+    meet_athletes: usize,
+    wso_athletes: usize,
+    attempts: AttemptSummary,
+    rows: Vec<WsoAthleteRow>,
+}
+
+fn build_dashboard_data(
+    athletes: &[Athlete],
+    results: &[LiftingResult],
+    selected_wso: &str,
+) -> WsoDashboardData {
     let members = athletes
         .iter()
         .filter(|athlete| {
@@ -50,9 +84,40 @@ fn dashboard(athletes: &[Athlete], results: &[LiftingResult], selected_wso: &str
         .filter(|row| names.contains(&normalize(&row.name)))
         .collect::<Vec<_>>();
     let summary = summarize_attempts(member_results.iter().copied());
-    let rows = members.iter().map(|athlete| { let result = member_results.iter().filter(|result| normalize(&result.name) == normalize(&athlete.name)).max_by(|left, right| left.total.total_cmp(&right.total)); view! { <tr><td>{athlete.name.clone()}</td><td>{athlete.gender.clone()}</td><td>{athlete.weight_class.clone()}</td><td>{athlete.club.clone()}</td><td>{athlete.entry_total}</td><td>{result.map(|row| row.snatch_best).unwrap_or_default()}</td><td>{result.map(|row| row.cj_best).unwrap_or_default()}</td><td>{result.map(|row| row.total).unwrap_or_default()}</td></tr> } }).collect_view();
-    view! { <div class="data-metric-grid"><DataMetric label="Meet athletes" value=athletes.len().to_string() /><DataMetric label="WSO athletes" value=members.len().to_string() /><DataMetric label="Snatch makes" value=format!("{:.1}%", percentage(summary.snatch_makes, summary.snatch_attempts)) /><DataMetric label="C&J makes" value=format!("{:.1}%", percentage(summary.cj_makes, summary.cj_attempts)) /><DataMetric label="Combined makes" value=format!("{:.1}%", percentage(summary.makes(), summary.attempts())) /><DataMetric label="Weight lifted" value=format!("{}kg", summary.volume) /></div>
-    <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Gender"</th><th>"Class"</th><th>"Club"</th><th>"Entry total"</th><th>"Snatch"</th><th>"C&J"</th><th>"Total"</th></tr></thead><tbody>{members.is_empty().then(|| view! { <EmptyTableRow columns=8 message="No athletes from this WSO were found at the meet." /> })}{rows}</tbody></table></div> }.into_any()
+    let mut best_results = HashMap::new();
+    for result in member_results {
+        let key = normalize(&result.name);
+        best_results
+            .entry(key)
+            .and_modify(|best: &mut &LiftingResult| {
+                if result.total > best.total {
+                    *best = result;
+                }
+            })
+            .or_insert(result);
+    }
+    let rows = members
+        .iter()
+        .map(|athlete| {
+            let result = best_results.get(&normalize(&athlete.name)).copied();
+            WsoAthleteRow {
+                name: athlete.name.clone(),
+                gender: athlete.gender.clone(),
+                weight_class: athlete.weight_class.clone(),
+                club: athlete.club.clone(),
+                entry_total: athlete.entry_total,
+                snatch_best: result.map(|row| row.snatch_best).unwrap_or_default(),
+                cj_best: result.map(|row| row.cj_best).unwrap_or_default(),
+                total: result.map(|row| row.total).unwrap_or_default(),
+            }
+        })
+        .collect();
+    WsoDashboardData {
+        meet_athletes: athletes.len(),
+        wso_athletes: members.len(),
+        attempts: summary,
+        rows,
+    }
 }
 
 #[derive(Default)]
@@ -110,6 +175,28 @@ fn record(value: f64, attempts: &mut usize, makes: &mut usize, volume: &mut f64)
 mod tests {
     use super::*;
     use crate::pages::comp_data::models::LiftResult;
+
+    fn result(name: &str, total: f64) -> LiftingResult {
+        LiftingResult {
+            name: name.to_owned(),
+            result: LiftResult {
+                meet: "Meet".to_owned(),
+                date: "2026-01-01".to_owned(),
+                age: "Senior".to_owned(),
+                body_weight: 70.0,
+                snatch1: 90.0,
+                snatch2: -95.0,
+                snatch3: 0.0,
+                snatch_best: total - 115.0,
+                cj1: 110.0,
+                cj2: 115.0,
+                cj3: -120.0,
+                cj_best: 115.0,
+                total,
+                adaptive: false,
+            },
+        }
+    }
     #[test]
     fn misses_count_but_unrecorded_attempts_do_not() {
         let (mut attempts, mut makes, mut volume) = (0, 0, 0.0);
@@ -121,28 +208,52 @@ mod tests {
 
     #[test]
     fn dashboard_attempt_summary_keeps_lift_types_separate() {
-        let result = LiftingResult {
-            name: "Athlete".to_owned(),
-            result: LiftResult {
-                meet: "Meet".to_owned(),
-                date: "2026-01-01".to_owned(),
-                age: "Senior".to_owned(),
-                body_weight: 70.0,
-                snatch1: 90.0,
-                snatch2: -95.0,
-                snatch3: 0.0,
-                snatch_best: 90.0,
-                cj1: 110.0,
-                cj2: 115.0,
-                cj3: -120.0,
-                cj_best: 115.0,
-                total: 205.0,
-                adaptive: false,
-            },
-        };
+        let result = result("Athlete", 205.0);
         let summary = summarize_attempts([&result].into_iter());
         assert_eq!((summary.snatch_attempts, summary.snatch_makes), (2, 1));
         assert_eq!((summary.cj_attempts, summary.cj_makes), (3, 2));
         assert_eq!(summary.volume, 315.0);
+    }
+
+    #[test]
+    fn dashboard_data_filters_wso_and_uses_each_athletes_best_result() {
+        let athletes = [
+            Athlete {
+                name: "Alex".to_owned(),
+                age: 25.0,
+                club: "A".to_owned(),
+                wso: Some("California North".to_owned()),
+                gender: "Women".to_owned(),
+                weight_class: "69kg".to_owned(),
+                entry_total: 200.0,
+                adaptive: false,
+                session_number: None,
+                session_platform: None,
+            },
+            Athlete {
+                name: "Blair".to_owned(),
+                age: 25.0,
+                club: "B".to_owned(),
+                wso: Some("Colorado".to_owned()),
+                gender: "Women".to_owned(),
+                weight_class: "69kg".to_owned(),
+                entry_total: 200.0,
+                adaptive: false,
+                session_number: None,
+                session_platform: None,
+            },
+        ];
+        let results = [
+            result(" Alex ", 205.0),
+            result("Alex", 215.0),
+            result("Blair", 220.0),
+        ];
+
+        let data = build_dashboard_data(&athletes, &results, "california   north");
+
+        assert_eq!(data.wso_athletes, 1);
+        assert_eq!(data.rows.len(), 1);
+        assert_eq!(data.rows[0].name, "Alex");
+        assert_eq!(data.rows[0].total, 215.0);
     }
 }

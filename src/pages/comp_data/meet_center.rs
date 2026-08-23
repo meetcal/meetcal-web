@@ -77,32 +77,7 @@ pub fn MeetCenter() -> impl IntoView {
             {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) {
                 (Some(Ok(upcoming)), Some(Ok(completed))) => {
                     let meets = meet_catalog(upcoming, completed);
-                    let query = meet_search.get();
-                    let suggestions = meet.get().is_empty().then(|| meet_suggestions(&meets, &query, 8)).filter(|matches| !matches.is_empty() || query.trim().chars().count() >= 3);
-                    let selected = meets.iter().find(|row| row.name == meet.get()).cloned();
-                    view! {
-                        <div class="meet-search">
-                            <label for="meet-search-input">"Meet"</label>
-                            <input id="meet-search-input" class="data-filter data-filter-wide" type="search" autocomplete="off" placeholder="Type at least 3 characters" prop:value=move || meet_search.get() on:input=move |event| { let value = event_target_value(&event); set_meet_search.set(value.clone()); if meet.get() != value { set_meet.set(String::new()); } } />
-                            {suggestions.map(|matches| view! {
-                                <div class="meet-suggestions" role="listbox" aria-label="Meet suggestions">
-                                    {matches.is_empty().then(|| view! { <p>"No matching meets"</p> })}
-                                    {matches.into_iter().map(|name| { let selected_name = name.clone(); view! { <button type="button" role="option" on:click=move |_| { set_meet_search.set(selected_name.clone()); set_meet.set(selected_name.clone()); }>{name}</button> } }).collect_view()}
-                                </div>
-                            })}
-                        </div>
-                        {selected.map(|row| view! {
-                            <article class="meet-summary">
-                                <div><span class="data-badge">{row.status}</span><h2>{row.name}</h2>
-                                <p>{format!("{} – {} · {}", format_us_date(&row.start_date), format_us_date(&row.end_date), row.time_zone)}</p>
-                                <p>{format!("{}, {} · {}, {} {}", row.venue_name, row.venue_street, row.venue_city, row.venue_state, row.venue_zip)}</p></div>
-                                <div class="meet-links">
-                                    {row.venue_map_apple_url.map(|url| view! { <a href=url target="_blank" rel="noopener noreferrer">"Open venue map"</a> })}
-                                    {row.venue_map_pdf_url.map(|url| view! { <a href=url target="_blank" rel="noopener noreferrer">"Venue PDF"</a> })}
-                                </div>
-                            </article>
-                        })}
-                    }.into_any()
+                    view! { <MeetPicker meets meet set_meet meet_search set_meet_search /> }.into_any()
                 }
                 (Some(Err(error)), _) | (_, Some(Err(error))) => view! { <p class="data-status error">{format!("Could not load meets: {error}")}</p> }.into_any(),
                 _ => view! { <p class="data-status">"Loading meets…"</p> }.into_any(),
@@ -118,6 +93,39 @@ pub fn MeetCenter() -> impl IntoView {
             }.into_any() }}
         </section>
         <Footer />
+    }
+}
+
+#[component]
+fn MeetPicker(
+    meets: Vec<Meet>,
+    meet: ReadSignal<String>,
+    set_meet: WriteSignal<String>,
+    meet_search: ReadSignal<String>,
+    set_meet_search: WriteSignal<String>,
+) -> impl IntoView {
+    let meets = StoredValue::new(meets);
+    view! {
+        <div class="meet-search">
+            <label for="meet-search-input">"Meet"</label>
+            <input id="meet-search-input" class="data-filter data-filter-wide" type="search" autocomplete="off" placeholder="Type at least 3 characters" prop:value=move || meet_search.get() on:input=move |event| { let value = event_target_value(&event); set_meet_search.set(value.clone()); if meet.get() != value { set_meet.set(String::new()); } } />
+            {move || meets.with_value(|meets| {
+                let query = meet_search.get();
+                (meet.get().is_empty() && query.trim().chars().count() >= 3).then(|| {
+                    let matches = meet_suggestions(meets, &query, 8);
+                    view! { <div class="meet-suggestions" role="listbox" aria-label="Meet suggestions">
+                        {matches.is_empty().then(|| view! { <p>"No matching meets"</p> })}
+                        {matches.into_iter().map(|name| { let selected_name = name.clone(); view! { <button type="button" role="option" on:click=move |_| { set_meet_search.set(selected_name.clone()); set_meet.set(selected_name.clone()); }>{name}</button> } }).collect_view()}
+                    </div> }
+                })
+            })}
+        </div>
+        {move || meets.with_value(|meets| meets.iter().find(|row| row.name == meet.get()).cloned()).map(|row| view! {
+            <article class="meet-summary"><div><span class="data-badge">{row.status}</span><h2>{row.name}</h2>
+            <p>{format!("{} – {} · {}", format_us_date(&row.start_date), format_us_date(&row.end_date), row.time_zone)}</p>
+            <p>{format!("{}, {} · {}, {} {}", row.venue_name, row.venue_street, row.venue_city, row.venue_state, row.venue_zip)}</p></div>
+            <div class="meet-links">{row.venue_map_apple_url.map(|url| view! { <a href=url target="_blank" rel="noopener noreferrer">"Open venue map"</a> })}{row.venue_map_pdf_url.map(|url| view! { <a href=url target="_blank" rel="noopener noreferrer">"Venue PDF"</a> })}</div></article>
+        })}
     }
 }
 
