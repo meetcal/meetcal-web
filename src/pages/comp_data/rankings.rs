@@ -1,4 +1,7 @@
-use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
+use super::{
+    EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter,
+    weight_class_options,
+};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response,
@@ -47,7 +50,7 @@ pub fn Rankings() -> impl IntoView {
                     let meets = filter_options(rankings.iter().map(|ranking| ranking.meet.as_str()));
                     let genders = filter_options(rankings.iter().map(|ranking| ranking.gender.as_str()));
                     let ages = filter_options(rankings.iter().map(|ranking| ranking.age_category.as_str()));
-                    let weights = filter_options(rankings.iter().map(|ranking| ranking.weight_class.as_str()));
+                    let weights = weight_class_options(rankings.iter().map(|ranking| ranking.weight_class.as_str()));
                     let selected_meet = meet.get();
                     let selected_gender = gender.get();
                     let selected_age = age.get();

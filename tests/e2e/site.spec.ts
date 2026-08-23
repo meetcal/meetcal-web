@@ -141,12 +141,34 @@ test("subscribed users can filter and sort qualifying totals", async ({ page }) 
           age_category: "Junior",
           weight_class: "63kg",
         },
+        {
+          qualifying_total: 340,
+          event_name: "Nationals",
+          gender: "Men",
+          age_category: "Senior",
+          weight_class: "110+kg",
+        },
+        {
+          qualifying_total: 330,
+          event_name: "Nationals",
+          gender: "Men",
+          age_category: "Senior",
+          weight_class: "110kg",
+        },
       ]),
     );
   });
 
   await page.goto("/qualifying-totals");
   await expect(page.getByRole("heading", { level: 1, name: "Qualifying totals" })).toBeVisible();
+  expect(await page.getByLabel("Weight class").locator("option").allTextContents()).toEqual([
+    "All classes",
+    "63kg",
+    "69kg",
+    "88kg",
+    "110kg",
+    "110+kg",
+  ]);
   await page.getByLabel("Gender").selectOption("Women");
   await expect(page.locator("tbody tr")).toHaveCount(2);
   await expect(page.locator("tbody")).not.toContainText("88kg");
@@ -171,7 +193,9 @@ test("national rankings submit the expected query and rank totals descending", a
 
   await page.goto("/national-rankings");
   await page.getByLabel("Federation").selectOption("USAMW");
-  await page.getByLabel("Division").fill("Women's Masters (40-44) 69kg");
+  await page.getByLabel("Gender").selectOption("Women");
+  await page.getByLabel("Age group").selectOption("Masters 40");
+  await page.getByLabel("Division").selectOption("Women's Masters (40-44) 69kg");
   await page.getByLabel("Year (optional)").fill("2026");
   await page.getByRole("button", { name: "View rankings" }).click();
 
@@ -180,6 +204,36 @@ test("national rankings submit the expected query and rank totals descending", a
   expect(requestedUrl).toContain("federation=USAMW");
   expect(requestedUrl).toContain("year=2026");
   expect(requestedUrl).toContain("age_category=Women%27s+Masters");
+});
+
+test("WSO records omit the organization column after an organization is selected", async ({ page }) => {
+  await mockSubscribedUser(page);
+  await page.route("**/data/wso", async (route) => {
+    await route.fulfill(jsonResponse(["California North"]));
+  });
+  await page.route("**/data/wso/records?**", async (route) => {
+    await route.fulfill(
+      jsonResponse([
+        {
+          age_category: "Senior",
+          cj_record: 189,
+          gender: "Men",
+          snatch_record: 158,
+          total_record: 347,
+          weight_class: "110+kg",
+          wso: "California North",
+        },
+      ]),
+    );
+  });
+
+  await page.goto("/wso-records");
+  await page.getByLabel("Organization").selectOption("California North");
+
+  await expect(page.locator("thead th")).toHaveCount(6);
+  await expect(page.getByRole("columnheader", { name: "WSO" })).toHaveCount(0);
+  await expect(page.locator("tbody tr").first().locator("td")).toHaveCount(6);
+  await expect(page.locator("tbody")).not.toContainText("California North");
 });
 
 test("legal pages expose the declared privacy services and cross-link", async ({ page }) => {

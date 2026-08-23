@@ -1,4 +1,4 @@
-use super::{EmptyTableRow, TableSkeleton};
+use super::{EmptyTableRow, SelectOptions, TableSkeleton};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response_with_query,
@@ -21,10 +21,94 @@ struct NationalRanking {
     date: Option<String>,
 }
 
+const AGE_GROUPS: &[&str] = &[
+    "U11",
+    "U13",
+    "U15",
+    "U17",
+    "Junior",
+    "Senior",
+    "Masters 35",
+    "Masters 40",
+    "Masters 45",
+    "Masters 50",
+    "Masters 55",
+    "Masters 60",
+    "Masters 65",
+    "Masters 70",
+    "Masters 75",
+    "Masters 80",
+    "Masters 85",
+    "Masters 90+",
+];
+
+fn division_options(gender: &str, age_group: &str) -> Vec<String> {
+    let weights: &[&str] = match (gender, age_group) {
+        ("Men", "U11" | "U13") => &[
+            "40kg", "44kg", "48kg", "52kg", "56kg", "60kg", "65kg", "65+kg",
+        ],
+        ("Women", "U11" | "U13") => &[
+            "36kg", "40kg", "44kg", "48kg", "53kg", "58kg", "63kg", "63+kg",
+        ],
+        ("Men", "U15") => &[
+            "48kg", "52kg", "56kg", "60kg", "65kg", "71kg", "79kg", "79+kg",
+        ],
+        ("Women", "U15") => &[
+            "40kg", "44kg", "48kg", "53kg", "58kg", "63kg", "69kg", "69+kg",
+        ],
+        ("Men", "U17") => &[
+            "56kg", "60kg", "65kg", "71kg", "79kg", "88kg", "94kg", "94+kg",
+        ],
+        ("Women", "U17") => &[
+            "44kg", "48kg", "53kg", "58kg", "63kg", "69kg", "77kg", "77+kg",
+        ],
+        ("Men", "Junior" | "Senior") => &[
+            "60kg", "65kg", "71kg", "79kg", "88kg", "94kg", "110kg", "110+kg",
+        ],
+        ("Men", masters) if masters.starts_with("Masters ") => &[
+            "60kg", "65kg", "71kg", "79kg", "88kg", "94kg", "110kg", "110+kg",
+        ],
+        ("Women", "Junior" | "Senior") => &[
+            "48kg", "53kg", "58kg", "63kg", "69kg", "77kg", "86kg", "86+kg",
+        ],
+        ("Women", masters) if masters.starts_with("Masters ") => &[
+            "48kg", "53kg", "58kg", "63kg", "69kg", "77kg", "86kg", "86+kg",
+        ],
+        _ => return Vec::new(),
+    };
+
+    let prefix = match age_group {
+        "U11" => format!("{gender}'s 11 Under Age Group"),
+        "U13" => format!("{gender}'s 13 Under Age Group"),
+        "U15" => format!("{gender}'s 14-15 Age Group"),
+        "U17" => format!("{gender}'s 16-17 Age Group"),
+        "Junior" => format!("Junior {gender}'s"),
+        "Senior" => format!("Open {gender}'s"),
+        masters if masters.starts_with("Masters ") => {
+            let start = masters.trim_start_matches("Masters ");
+            let range = if start == "90+" {
+                "90+".to_owned()
+            } else {
+                let lower = start.parse::<u32>().unwrap_or_default();
+                format!("{lower}-{}", lower + 4)
+            };
+            format!("{gender}'s Masters ({range})")
+        }
+        _ => return Vec::new(),
+    };
+
+    weights
+        .iter()
+        .map(|weight| format!("{prefix} {weight}"))
+        .collect()
+}
+
 #[component]
 pub fn NationalRankings() -> impl IntoView {
     let (federation, set_federation) = signal("USAW".to_owned());
-    let (division, set_division) = signal(String::new());
+    let (gender, set_gender) = signal("Men".to_owned());
+    let (age_group, set_age_group) = signal("Senior".to_owned());
+    let (division, set_division) = signal("Open Men's 60kg".to_owned());
     let (year, set_year) = signal(String::new());
     let (request, set_request) = signal(None::<NationalRankingQuery>);
 
@@ -75,14 +159,51 @@ pub fn NationalRankings() -> impl IntoView {
                         <option value="USAMW">"USAMW"</option>
                     </select>
                 </label>
+                <label>
+                    "Gender"
+                    <select class="data-filter" on:change=move |event| {
+                        let selected_gender = event_target_value(&event);
+                        let next_division = division_options(&selected_gender, &age_group.get())
+                            .into_iter()
+                            .next()
+                            .unwrap_or_default();
+                        set_gender.set(selected_gender);
+                        set_division.set(next_division);
+                    }>
+                        <option value="Men">"Men"</option>
+                        <option value="Women">"Women"</option>
+                    </select>
+                </label>
+                <label>
+                    "Age group"
+                    <select class="data-filter" on:change=move |event| {
+                        let selected_age_group = event_target_value(&event);
+                        let next_division = division_options(&gender.get(), &selected_age_group)
+                            .into_iter()
+                            .next()
+                            .unwrap_or_default();
+                        set_age_group.set(selected_age_group);
+                        set_division.set(next_division);
+                    }>
+                        {AGE_GROUPS.iter().map(|age_group| view! {
+                            <option value=*age_group selected=*age_group == "Senior">{*age_group}</option>
+                        }).collect_view()}
+                    </select>
+                </label>
                 <label class="data-query-grow">
                     "Division"
-                    <input
+                    <select
                         class="data-filter"
-                        placeholder="Open Men's 60kg"
                         required=true
-                        on:input=move |event| set_division.set(event_target_value(&event))
-                    />
+                        prop:value=move || division.get()
+                        on:change=move |event| set_division.set(event_target_value(&event))
+                    >
+                        {move || {
+                            let selected_division = division.get();
+                            let options = division_options(&gender.get(), &age_group.get());
+                            view! { <SelectOptions values=options selected=Some(selected_division) /> }
+                        }}
+                    </select>
                 </label>
                 <label>
                     "Year (optional)"
@@ -96,7 +217,7 @@ pub fn NationalRankings() -> impl IntoView {
                 </label>
                 <button class="data-search-button" type="submit">"View rankings"</button>
             </form>
-            <p class="data-help">"Division examples: Open Men's 60kg, Junior Women's 48kg, Men's Masters (40-44) 110+kg."</p>
+            <p class="data-help">"Division choices match the gender, age group, and weight classes used in the MeetCal app."</p>
 
             {move || rankings.with(|response| match response {
                 None => view! { <TableSkeleton columns=4 /> }.into_any(),
@@ -163,6 +284,29 @@ mod tests {
 
         assert!(query.contains("federation=USAMW"));
         assert!(query.contains("year=2026"));
+    }
+
+    #[test]
+    fn division_options_match_the_mobile_app() {
+        assert_eq!(
+            division_options("Women", "Masters 40"),
+            [
+                "Women's Masters (40-44) 48kg",
+                "Women's Masters (40-44) 53kg",
+                "Women's Masters (40-44) 58kg",
+                "Women's Masters (40-44) 63kg",
+                "Women's Masters (40-44) 69kg",
+                "Women's Masters (40-44) 77kg",
+                "Women's Masters (40-44) 86kg",
+                "Women's Masters (40-44) 86+kg",
+            ]
+        );
+        assert_eq!(
+            division_options("Men", "Senior")
+                .first()
+                .map(String::as_str),
+            Some("Open Men's 60kg")
+        );
     }
 
     #[test]

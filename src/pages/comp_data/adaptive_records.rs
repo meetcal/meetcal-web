@@ -1,4 +1,7 @@
-use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
+use super::{
+    EmptyTableRow, SelectOptions, TableSkeleton, compare_weight_classes, matches_filter,
+    weight_class_options,
+};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response_with_query,
@@ -48,7 +51,7 @@ pub fn AdaptiveRecords() -> impl IntoView {
                     <p class="data-status error">{format!("Could not load adaptive records: {error}")}</p>
                 }.into_any(),
                 Some(Ok(records)) => {
-                    let weights = filter_options(records.iter().map(|row| row.weight_class.as_str()));
+                    let weights = weight_class_options(records.iter().map(|row| row.weight_class.as_str()));
                     let selected_weight = weight_class.get();
                     let mut filtered = records
                         .iter()
@@ -58,7 +61,7 @@ pub fn AdaptiveRecords() -> impl IntoView {
                         "snatch_desc" => filtered.sort_by(|left, right| right.snatch.total_cmp(&left.snatch)),
                         "cj_desc" => filtered.sort_by(|left, right| right.cj.total_cmp(&left.cj)),
                         "total_desc" => filtered.sort_by(|left, right| right.total.total_cmp(&left.total)),
-                        _ => filtered.sort_by(|left, right| left.weight_class.cmp(&right.weight_class)),
+                        _ => filtered.sort_by(|left, right| compare_weight_classes(&left.weight_class, &right.weight_class)),
                     }
                     let is_empty = filtered.is_empty();
                     let rows = filtered.into_iter().map(|row| view! {

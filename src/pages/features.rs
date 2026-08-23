@@ -68,7 +68,7 @@ pub fn FeaturesPage() -> impl IntoView {
                 <div>
                     <h2>"Built for real meet days"</h2>
                     <p>
-                        "Timezone-aware session times, dark mode, reminders, widgets, and fast app loading help keep lifters, coaches, and spectators oriented from weigh-in to the final attempt."
+                        "Build a clear plan for every athlete—from weigh-in and warmups to platform and session time—then keep the whole team’s schedule in one place."
                     </p>
                 </div>
             </section>

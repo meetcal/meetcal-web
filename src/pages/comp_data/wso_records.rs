@@ -1,4 +1,7 @@
-use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
+use super::{
+    EmptyTableRow, SelectOptions, TableSkeleton, compare_weight_classes, filter_options,
+    matches_filter, weight_class_options,
+};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::{get_api_response, get_api_response_with_query},
@@ -19,7 +22,6 @@ struct WsoRecord {
     snatch_record: Option<f64>,
     total_record: Option<f64>,
     weight_class: String,
-    wso: String,
 }
 
 fn lift_value(value: Option<f64>) -> String {
@@ -89,14 +91,14 @@ pub fn WsoRecords() -> impl IntoView {
                 view! { <p class="data-status">"Choose an organization to view its records."</p> }.into_any()
             } else {
                 records.with(|response| match response {
-                    None => view! { <TableSkeleton columns=7 /> }.into_any(),
+                    None => view! { <TableSkeleton columns=6 /> }.into_any(),
                     Some(Err(error)) => view! {
                         <p class="data-status error">{format!("Could not load WSO records: {error}")}</p>
                     }.into_any(),
                     Some(Ok(records)) => {
                         let genders = filter_options(records.iter().map(|row| row.gender.as_str()));
                         let ages = filter_options(records.iter().map(|row| row.age_category.as_str()));
-                        let weights = filter_options(records.iter().map(|row| row.weight_class.as_str()));
+                        let weights = weight_class_options(records.iter().map(|row| row.weight_class.as_str()));
                         let selected_gender = gender.get();
                         let selected_age = age.get();
                         let selected_weight = weight_class.get();
@@ -108,13 +110,13 @@ pub fn WsoRecords() -> impl IntoView {
                         match sort.get().as_str() {
                             "snatch_desc" => filtered.sort_by(|left, right| right.snatch_record.unwrap_or_default().total_cmp(&left.snatch_record.unwrap_or_default())),
                             "cj_desc" => filtered.sort_by(|left, right| right.cj_record.unwrap_or_default().total_cmp(&left.cj_record.unwrap_or_default())),
-                            "weight_asc" => filtered.sort_by(|left, right| left.weight_class.cmp(&right.weight_class)),
+                            "weight_asc" => filtered.sort_by(|left, right| compare_weight_classes(&left.weight_class, &right.weight_class)),
                             _ => filtered.sort_by(|left, right| right.total_record.unwrap_or_default().total_cmp(&left.total_record.unwrap_or_default())),
                         }
                         let is_empty = filtered.is_empty();
                         let rows = filtered.into_iter().map(|row| view! {
                             <tr>
-                                <td>{row.wso.clone()}</td><td>{row.gender.clone()}</td><td>{row.age_category.clone()}</td>
+                                <td>{row.gender.clone()}</td><td>{row.age_category.clone()}</td>
                                 <td>{row.weight_class.clone()}</td><td>{lift_value(row.snatch_record)}</td>
                                 <td>{lift_value(row.cj_record)}</td><td>{lift_value(row.total_record)}</td>
                             </tr>
@@ -128,8 +130,8 @@ pub fn WsoRecords() -> impl IntoView {
                                 <label class="data-sort">"Sort"<select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))><option value="total_desc">"Total: high to low"</option><option value="snatch_desc">"Snatch: high to low"</option><option value="cj_desc">"Clean & jerk: high to low"</option><option value="weight_asc">"Weight class"</option></select></label>
                             </div>
                             <div class="data-table-wrap"><table class="data-table">
-                                <thead><tr><th>"WSO"</th><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Snatch"</th><th>"Clean & jerk"</th><th>"Total"</th></tr></thead>
-                                <tbody>{is_empty.then(|| view! { <EmptyTableRow columns=7 message="No WSO records match these filters." /> })}{rows}</tbody>
+                                <thead><tr><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Snatch"</th><th>"Clean & jerk"</th><th>"Total"</th></tr></thead>
+                                <tbody>{is_empty.then(|| view! { <EmptyTableRow columns=6 message="No WSO records match these filters." /> })}{rows}</tbody>
                             </table></div>
                         }.into_any()
                     }

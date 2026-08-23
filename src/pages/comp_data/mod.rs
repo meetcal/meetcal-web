@@ -1,4 +1,5 @@
 use leptos::prelude::*;
+use std::cmp::Ordering;
 
 pub mod adaptive_records;
 pub mod data_home;
@@ -19,6 +20,42 @@ pub(crate) fn filter_options<'a>(values: impl Iterator<Item = &'a str>) -> Vec<S
     options.sort();
     options.dedup();
     options
+}
+
+pub(crate) fn weight_class_options<'a>(values: impl Iterator<Item = &'a str>) -> Vec<String> {
+    let mut options = values
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    options.sort_by(|left, right| compare_weight_classes(left, right));
+    options.dedup();
+    options
+}
+
+pub(crate) fn compare_weight_classes(left: &str, right: &str) -> Ordering {
+    let left_key = weight_class_key(left);
+    let right_key = weight_class_key(right);
+
+    match (left_key.0, right_key.0) {
+        (Some(left_weight), Some(right_weight)) => left_weight
+            .cmp(&right_weight)
+            .then_with(|| left_key.1.cmp(&right_key.1))
+            .then_with(|| left.cmp(right)),
+        (Some(_), None) => Ordering::Less,
+        (None, Some(_)) => Ordering::Greater,
+        (None, None) => left.cmp(right),
+    }
+}
+
+fn weight_class_key(value: &str) -> (Option<u32>, bool) {
+    let digits = value
+        .chars()
+        .skip_while(|character| !character.is_ascii_digit())
+        .take_while(char::is_ascii_digit)
+        .collect::<String>();
+
+    (digits.parse().ok(), value.contains('+'))
 }
 
 pub(crate) fn matches_filter(value: &str, selected: &str) -> bool {
@@ -84,6 +121,18 @@ mod tests {
         let options = filter_options(["  Women ", "Men", "", "Men", "   ", "Youth"].into_iter());
 
         assert_eq!(options, ["Men", "Women", "Youth"]);
+    }
+
+    #[test]
+    fn weight_classes_sort_by_weight_with_open_classes_last() {
+        let options = weight_class_options(
+            ["110+kg", "32kg", "110kg", "63+kg", "30kg", "63kg", "32kg"].into_iter(),
+        );
+
+        assert_eq!(
+            options,
+            ["30kg", "32kg", "63kg", "63+kg", "110kg", "110+kg"]
+        );
     }
 
     #[test]

@@ -1,4 +1,7 @@
-use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
+use super::{
+    EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter,
+    weight_class_options,
+};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response,
@@ -50,7 +53,7 @@ pub fn QualifyingTotals() -> impl IntoView {
                         let meets = filter_options(rows.iter().map(|row| row.event_name.as_str()));
                         let genders = filter_options(rows.iter().map(|row| row.gender.as_str()));
                         let ages = filter_options(rows.iter().map(|row| row.age_category.as_str()));
-                        let weights = filter_options(rows.iter().map(|row| row.weight_class.as_str()));
+                        let weights = weight_class_options(rows.iter().map(|row| row.weight_class.as_str()));
 
                         let selected_meet = meet.get();
                         let selected_gender = gender.get();
