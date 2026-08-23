@@ -81,6 +81,22 @@
       "destination": "/seo/adaptive-records.html"
     },
     {
+      "source": "/meet-center",
+      "destination": "/seo/meet-center.html"
+    },
+    {
+      "source": "/club-dashboard",
+      "destination": "/seo/club-dashboard.html"
+    },
+    {
+      "source": "/wso-dashboard",
+      "destination": "/seo/wso-dashboard.html"
+    },
+    {
+      "source": "/wrapped",
+      "destination": "/seo/wrapped.html"
+    },
+    {
       "source": "/subscription",
       "destination": "/seo/subscription.html"
     }

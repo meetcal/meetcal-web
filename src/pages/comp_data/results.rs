@@ -1,4 +1,4 @@
-use super::TableSkeleton;
+use super::{TableSkeleton, models::attempt, yes_no};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response_with_query,
@@ -46,9 +46,16 @@ struct LiftingResult {
     date: String,
     age: String,
     body_weight: f64,
+    snatch1: f64,
+    snatch2: f64,
+    snatch3: f64,
     snatch_best: f64,
+    cj1: f64,
+    cj2: f64,
+    cj3: f64,
     cj_best: f64,
     total: f64,
+    adaptive: bool,
 }
 
 #[component]
@@ -103,7 +110,7 @@ pub fn Results() -> impl IntoView {
             </form>
 
             {move || results.with(|response| match response {
-                None => view! { <TableSkeleton columns=8 /> }.into_any(),
+                None => view! { <TableSkeleton columns=14 /> }.into_any(),
                 Some(Err(error)) => view! {
                     <p class="data-status error">{format!("Could not load results: {error}")}</p>
                 }
@@ -145,9 +152,16 @@ pub fn Results() -> impl IntoView {
                                     <td>{row.meet.clone()}</td>
                                     <td>{row.age.clone()}</td>
                                     <td>{row.body_weight}</td>
+                                    <td>{attempt(row.snatch1)}</td>
+                                    <td>{attempt(row.snatch2)}</td>
+                                    <td>{attempt(row.snatch3)}</td>
                                     <td>{row.snatch_best}</td>
+                                    <td>{attempt(row.cj1)}</td>
+                                    <td>{attempt(row.cj2)}</td>
+                                    <td>{attempt(row.cj3)}</td>
                                     <td>{row.cj_best}</td>
                                     <td>{row.total}</td>
+                                    <td>{yes_no(row.adaptive)}</td>
                                 </tr>
                             }
                         })
@@ -175,9 +189,16 @@ pub fn Results() -> impl IntoView {
                                         <th>"Meet"</th>
                                         <th>"Division"</th>
                                         <th>"Bodyweight"</th>
-                                        <th>"Snatch"</th>
-                                        <th>"Clean & jerk"</th>
+                                        <th>"S1"</th>
+                                        <th>"S2"</th>
+                                        <th>"S3"</th>
+                                        <th>"Best snatch"</th>
+                                        <th>"C&J 1"</th>
+                                        <th>"C&J 2"</th>
+                                        <th>"C&J 3"</th>
+                                        <th>"Best C&J"</th>
                                         <th>"Total"</th>
+                                        <th>"Adaptive"</th>
                                     </tr>
                                 </thead>
                                 <tbody>{rows}</tbody>
@@ -199,12 +220,13 @@ mod tests {
     #[test]
     fn search_response_deserializes_results_and_suggestions() {
         let response: SearchResponse = serde_json::from_str(
-            r#"{"matched_name":"Test Athlete","suggestions":["Test Athlete Jr"],"results":[{"meet":"Nationals","date":"2026-06-20","age":"Senior","body_weight":70.5,"snatch_best":100.0,"cj_best":125.0,"total":225.0}]}"#,
+            r#"{"matched_name":"Test Athlete","suggestions":["Test Athlete Jr"],"results":[{"meet":"Nationals","date":"2026-06-20","age":"Senior","body_weight":70.5,"snatch1":95.0,"snatch2":100.0,"snatch3":-103.0,"snatch_best":100.0,"cj1":120.0,"cj2":125.0,"cj3":0.0,"cj_best":125.0,"total":225.0,"adaptive":false}]}"#,
         )
         .unwrap();
 
         assert_eq!(response.matched_name.as_deref(), Some("Test Athlete"));
         assert_eq!(response.suggestions, ["Test Athlete Jr"]);
         assert_eq!(response.results[0].total, 225.0);
+        assert_eq!(response.results[0].snatch3, -103.0);
     }
 }

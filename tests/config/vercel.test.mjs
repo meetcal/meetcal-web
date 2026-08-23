@@ -67,4 +67,12 @@ test("production rewrites serve route-specific metadata shells", async () => {
   );
   assert.match(gatedHtml, /<title>Weightlifting Qualifying Totals<\/title>/);
   assert.match(gatedHtml, /content="noindex, nofollow"/);
+
+  for (const route of ["meet-center", "club-dashboard", "wso-dashboard", "wrapped"]) {
+    const rewrite = config.rewrites.find(({ source }) => source === `/${route}`);
+    assert.equal(rewrite.destination, `/seo/${route}.html`);
+    const html = await readFile(new URL(`../../dist/seo/${route}.html`, import.meta.url), "utf8");
+    assert.match(html, /content="noindex, nofollow"/);
+    assert.match(html, new RegExp(`href="https:\\/\\/meetcal\\.app\\/${route}"`));
+  }
 });

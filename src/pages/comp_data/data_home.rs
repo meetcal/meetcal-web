@@ -10,7 +10,7 @@ pub fn CompData() -> impl IntoView {
             <p class="data-eyebrow">"Competition data"</p>
             <h1>"Find the numbers you need"</h1>
             <p class="data-intro">
-                "Browse official qualification information, standards, results, rankings, and records."
+                "Browse meets, team performance, athlete history, qualification data, rankings, and records."
             </p>
             <div class="data-card-grid">
                 <A href="/qualifying-totals" attr:class="data-card">
@@ -24,6 +24,22 @@ pub fn CompData() -> impl IntoView {
                 <A href="/results" attr:class="data-card">
                     <h2>"Results"</h2>
                     <p>"Search an athlete’s competition results over a date range."</p>
+                </A>
+                <A href="/meet-center" attr:class="data-card">
+                    <h2>"Meets"</h2>
+                    <p>"Venue details, schedules, start lists, and complete meet results."</p>
+                </A>
+                <A href="/club-dashboard" attr:class="data-card">
+                    <h2>"Club Dashboard"</h2>
+                    <p>"Meet performance, medals, PRs, make rates, and athlete totals by club."</p>
+                </A>
+                <A href="/wso-dashboard" attr:class="data-card">
+                    <h2>"WSO Dashboard"</h2>
+                    <p>"Participation, make rates, lifted volume, and results for a selected WSO."</p>
+                </A>
+                <A href="/wrapped" attr:class="data-card">
+                    <h2>"Wrapped & Compare"</h2>
+                    <p>"Yearly athlete recaps and side-by-side performance comparisons."</p>
                 </A>
                 <A href="/rankings" attr:class="data-card">
                     <h2>"Rankings"</h2>
