@@ -3,6 +3,7 @@ use std::cmp::Ordering;
 
 pub mod adaptive_records;
 pub(crate) mod analytics;
+pub(crate) mod athlete_autocomplete;
 pub mod club_dashboard;
 pub mod data_home;
 pub mod meet_center;

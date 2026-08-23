@@ -1,6 +1,7 @@
 use super::{
     TableSkeleton,
     analytics::{WrappedStats, wrapped_stats},
+    athlete_autocomplete::AthleteAutocomplete,
     models::LiftingResult,
 };
 use crate::{
@@ -50,7 +51,7 @@ pub fn Wrapped() -> impl IntoView {
     });
     view! { <Header /><section class="data-page"><p class="data-eyebrow">"Competition data"</p><h1>"Athlete wrapped"</h1><p class="data-intro">"Summarize an athlete’s competition year, best lifts, make rate, and progress."</p>
         <form class="data-query-form" on:submit=move |event| { event.prevent_default(); let athlete = athlete_name.get().trim().to_owned(); if athlete.is_empty() { return; } let selected_year = year.get().parse().unwrap_or(current_year); set_request.set(Some(WrappedRequest { athlete, year: selected_year })); }>
-            <label class="data-query-grow">"Athlete"<input class="data-filter" required=true placeholder="Athlete name" on:input=move |event| set_athlete_name.set(event_target_value(&event)) /></label>
+            <AthleteAutocomplete value=athlete_name set_value=set_athlete_name input_id="wrapped-athlete" wrapper_class="data-query-grow" />
             <label>"Year"<input class="data-filter data-year-input" inputmode="numeric" maxlength="4" prop:value=current_year on:input=move |event| set_year.set(event_target_value(&event)) /></label>
             <button class="data-search-button" type="submit">"Build wrapped"</button>
         </form>

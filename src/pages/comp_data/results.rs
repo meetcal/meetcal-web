@@ -1,4 +1,7 @@
-use super::{TableSkeleton, format_us_date, models::attempt, yes_no};
+use super::{
+    TableSkeleton, athlete_autocomplete::AthleteAutocomplete, format_us_date, models::attempt,
+    yes_no,
+};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response_with_query,
@@ -113,12 +116,7 @@ pub fn Results() -> impl IntoView {
                     }));
                 }
             }>
-                <input
-                    class="data-filter"
-                    placeholder="Athlete name"
-                    prop:value=move || name.get()
-                    on:input=move |event| set_name.set(event_target_value(&event))
-                />
+                <AthleteAutocomplete value=name set_value=set_name input_id="results-athlete" />
                 <button class="data-search-button" type="submit">"Search"</button>
             </form>
 

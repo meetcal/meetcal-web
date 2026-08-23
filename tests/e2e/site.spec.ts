@@ -278,10 +278,18 @@ const completedMeet = {
 test("athlete results show every competition field except federation", async ({ page }) => {
   await mockSubscribedUser(page);
   await page.route("**/search?**", async (route) => {
-    await route.fulfill(jsonResponse({ matched_name: "Test Athlete", suggestions: [], results: [completeResult] }));
+    const url = new URL(route.request().url());
+    const isSuggestion = !url.searchParams.has("start_date");
+    await route.fulfill(jsonResponse(isSuggestion
+      ? { matched_name: null, suggestions: ["Test Athlete"], results: [] }
+      : { matched_name: "Test Athlete", suggestions: [], results: [completeResult] }));
   });
   await page.goto("/results");
-  await page.getByPlaceholder("Athlete name").fill("Test Athlete");
+  const athleteSearch = page.getByLabel("Athlete", { exact: true });
+  await athleteSearch.fill("Te");
+  await expect(page.getByRole("listbox", { name: "Athlete suggestions" })).toHaveCount(0);
+  await athleteSearch.fill("Tes");
+  await page.getByRole("option", { name: "Test Athlete" }).click();
   await page.getByRole("button", { name: "Search" }).click();
 
   const headers = await page.getByRole("columnheader").allTextContents();
@@ -357,12 +365,21 @@ test("club and WSO dashboards expose meet performance metrics", async ({ page })
 test("wrapped builds a readable single-athlete yearly recap", async ({ page }) => {
   await mockSubscribedUser(page);
   await page.route("**/search?**", async (route) => {
-    const name = new URL(route.request().url()).searchParams.get("query") ?? "";
+    const url = new URL(route.request().url());
+    const name = url.searchParams.get("query") ?? "";
+    if (!url.searchParams.has("start_date")) {
+      await route.fulfill(jsonResponse({ matched_name: null, suggestions: ["Test Athlete"], results: [] }));
+      return;
+    }
     const result = { ...completeResult, name, meet: "Athletic Lab Weightlifting Club 2026 March Madness Weightlifting Meet" };
     await route.fulfill(jsonResponse({ matched_name: name, suggestions: [], results: [result] }));
   });
   await page.goto("/wrapped");
-  await page.getByLabel("Athlete", { exact: true }).fill("Test Athlete");
+  const athleteSearch = page.getByLabel("Athlete", { exact: true });
+  await athleteSearch.fill("Te");
+  await expect(page.getByRole("listbox", { name: "Athlete suggestions" })).toHaveCount(0);
+  await athleteSearch.fill("Tes");
+  await page.getByRole("option", { name: "Test Athlete" }).click();
   await page.getByLabel("Year").fill("2026");
   await page.getByRole("button", { name: "Build wrapped" }).click();
 
