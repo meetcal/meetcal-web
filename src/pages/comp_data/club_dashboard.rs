@@ -1,4 +1,4 @@
-use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, yes_no};
+use super::{DataMetric, EmptyTableRow, SelectOptions, TableSkeleton, filter_options, yes_no};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::{get_api_response, get_api_response_with_query},
@@ -120,9 +120,6 @@ pub fn ClubDashboard() -> impl IntoView {
     }
 }
 
-fn metric(label: &'static str, value: String) -> impl IntoView {
-    view! { <div class="data-metric"><span>{label}</span><strong>{value}</strong></div> }
-}
 fn medal(value: &Option<String>) -> String {
     value
         .as_deref()
@@ -137,7 +134,7 @@ fn medal(value: &Option<String>) -> String {
 }
 fn dashboard(stats: &MeetStats) -> AnyView {
     let rows = stats.athlete_results.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.weight_class.clone()}</td><td>{row.body_weight}</td><td>{row.snatch_best}</td><td>{medal(&row.snatch_medal)}</td><td>{row.cj_best}</td><td>{medal(&row.cj_medal)}</td><td>{row.total}</td><td>{medal(&row.total_medal)}</td><td>{yes_no(row.is_pr)}</td><td>{yes_no(row.perfect_lifts)}</td></tr> }).collect_view();
-    view! { <div class="data-metric-grid">{metric("Athletes", stats.total_athletes.to_string())}{metric("Gold medals", stats.gold_medals.to_string())}{metric("Silver medals", stats.silver_medals.to_string())}{metric("Bronze medals", stats.bronze_medals.to_string())}{metric("Total PRs", stats.total_prs.to_string())}{metric("6 for 6", stats.perfect_6_for_6.to_string())}{metric("Weight lifted", format!("{}kg", stats.total_weight_lifted))}{metric("Snatch makes", format!("{}%", stats.snatch_make_rate))}{metric("C&J makes", format!("{}%", stats.cj_make_rate))}{metric("Combined makes", format!("{}%", stats.combined_make_rate))}</div>
+    view! { <div class="data-metric-grid"><DataMetric label="Athletes" value=stats.total_athletes.to_string() /><DataMetric label="Gold medals" value=stats.gold_medals.to_string() /><DataMetric label="Silver medals" value=stats.silver_medals.to_string() /><DataMetric label="Bronze medals" value=stats.bronze_medals.to_string() /><DataMetric label="Total PRs" value=stats.total_prs.to_string() /><DataMetric label="6 for 6" value=stats.perfect_6_for_6.to_string() /><DataMetric label="Weight lifted" value=format!("{}kg", stats.total_weight_lifted) /><DataMetric label="Snatch makes" value=format!("{}%", stats.snatch_make_rate) /><DataMetric label="C&J makes" value=format!("{}%", stats.cj_make_rate) /><DataMetric label="Combined makes" value=format!("{}%", stats.combined_make_rate) /></div>
     <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Class"</th><th>"Bodyweight"</th><th>"Snatch"</th><th>"Snatch medal"</th><th>"C&J"</th><th>"C&J medal"</th><th>"Total"</th><th>"Total medal"</th><th>"PR"</th><th>"6 for 6"</th></tr></thead><tbody>{stats.athlete_results.is_empty().then(|| view! { <EmptyTableRow columns=11 message="No club results were found for this meet." /> })}{rows}</tbody></table></div> }.into_any()
 }
 

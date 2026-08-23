@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use super::models::LiftingResult;
+use super::models::LiftResult;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct WrappedStats {
@@ -17,7 +17,7 @@ pub(crate) struct WrappedStats {
     pub top_meet: Option<String>,
 }
 
-pub(crate) fn wrapped_stats(results: &[LiftingResult]) -> WrappedStats {
+pub(crate) fn wrapped_stats(results: &[LiftResult]) -> WrappedStats {
     let mut ordered = results.iter().collect::<Vec<_>>();
     ordered.sort_by(|left, right| left.date.cmp(&right.date).then(left.meet.cmp(&right.meet)));
     let mut stats = WrappedStats::default();
@@ -99,11 +99,10 @@ pub(crate) fn percentage(makes: usize, attempts: usize) -> f64 {
 mod tests {
     use super::*;
 
-    fn result(date: &str, total: f64, attempts: [f64; 6]) -> LiftingResult {
-        LiftingResult {
+    fn result(date: &str, total: f64, attempts: [f64; 6]) -> LiftResult {
+        LiftResult {
             meet: format!("Meet {date}"),
             date: date.to_owned(),
-            name: "Athlete".to_owned(),
             age: "Senior".to_owned(),
             body_weight: 70.0,
             snatch1: attempts[0],

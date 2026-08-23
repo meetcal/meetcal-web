@@ -1,13 +1,13 @@
 use std::collections::HashSet;
 
 use super::{
-    EmptyTableRow, TableSkeleton, format_us_date, format_us_time,
-    models::{Athlete, LiftingResult, Meet, MeetQuery, ScheduleRow, attempt},
+    EmptyTableRow, TableSkeleton, format_us_date, format_us_time, load_meet_data,
+    models::{Athlete, LiftingResult, Meet, ScheduleRow, attempt},
     yes_no,
 };
 use crate::{
     components::{footer::Footer, header::Header},
-    utils::api::{get_api_response, get_api_response_with_query},
+    utils::api::get_api_response,
 };
 use leptos::prelude::*;
 
@@ -23,6 +23,36 @@ fn session(value: Option<f64>) -> String {
         .unwrap_or_else(|| "—".to_owned())
 }
 
+fn meet_catalog(upcoming: &[Meet], completed: &[Meet]) -> Vec<Meet> {
+    let mut meets = upcoming
+        .iter()
+        .chain(completed)
+        .cloned()
+        .collect::<Vec<_>>();
+    meets.sort_by(|left, right| {
+        right
+            .start_date
+            .cmp(&left.start_date)
+            .then_with(|| left.name.cmp(&right.name))
+    });
+    let mut seen = HashSet::new();
+    meets.retain(|row| seen.insert(row.name.clone()));
+    meets
+}
+
+fn meet_suggestions(meets: &[Meet], query: &str, limit: usize) -> Vec<String> {
+    let query = query.trim().to_lowercase();
+    if query.chars().count() < 3 {
+        return Vec::new();
+    }
+    meets
+        .iter()
+        .filter(|row| row.name.to_lowercase().contains(&query))
+        .take(limit)
+        .map(|row| row.name.clone())
+        .collect()
+}
+
 #[component]
 pub fn MeetCenter() -> impl IntoView {
     let (meet, set_meet) = signal(String::new());
@@ -31,12 +61,12 @@ pub fn MeetCenter() -> impl IntoView {
     let completed =
         LocalResource::new(|| async { get_api_response::<Meet>("/meets/completed").await });
     let schedule =
-        LocalResource::new(move || load_selected::<ScheduleRow>(meet.get(), "/meets/schedule"));
+        LocalResource::new(move || load_meet_data::<ScheduleRow>(meet.get(), "/meets/schedule"));
     let athletes = LocalResource::new(move || {
-        load_selected::<Athlete>(meet.get(), "/meets/athletes-sessions")
+        load_meet_data::<Athlete>(meet.get(), "/meets/athletes-sessions")
     });
     let results =
-        LocalResource::new(move || load_selected::<LiftingResult>(meet.get(), "/lifting-results"));
+        LocalResource::new(move || load_meet_data::<LiftingResult>(meet.get(), "/lifting-results"));
 
     view! {
         <Header />
@@ -46,20 +76,9 @@ pub fn MeetCenter() -> impl IntoView {
             <p class="data-intro">"Search all meets to see venue details, session schedules, start lists, and published results."</p>
             {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) {
                 (Some(Ok(upcoming)), Some(Ok(completed))) => {
-                    let mut meets = upcoming.iter().chain(completed.iter()).cloned().collect::<Vec<_>>();
-                    meets.sort_by(|left, right| right.start_date.cmp(&left.start_date).then_with(|| left.name.cmp(&right.name)));
-                    let mut seen = HashSet::new();
-                    meets.retain(|row| seen.insert(row.name.clone()));
+                    let meets = meet_catalog(upcoming, completed);
                     let query = meet_search.get();
-                    let normalized_query = query.trim().to_lowercase();
-                    let suggestions = (normalized_query.chars().count() >= 3 && meet.get().is_empty()).then(|| {
-                        meets
-                            .iter()
-                            .filter(|row| row.name.to_lowercase().contains(&normalized_query))
-                            .take(8)
-                            .map(|row| row.name.clone())
-                            .collect::<Vec<_>>()
-                    });
+                    let suggestions = meet.get().is_empty().then(|| meet_suggestions(&meets, &query, 8)).filter(|matches| !matches.is_empty() || query.trim().chars().count() >= 3);
                     let selected = meets.iter().find(|row| row.name == meet.get()).cloned();
                     view! {
                         <div class="meet-search">
@@ -102,18 +121,6 @@ pub fn MeetCenter() -> impl IntoView {
     }
 }
 
-async fn load_selected<T: serde::de::DeserializeOwned>(
-    meet: String,
-    path: &str,
-) -> Result<Vec<T>, String> {
-    if meet.is_empty() {
-        return Ok(Vec::new());
-    }
-    get_api_response_with_query(path, &MeetQuery { meet })
-        .await
-        .map_err(|error| error.to_string())
-}
-
 fn table_schedule(response: Option<&Result<Vec<ScheduleRow>, String>>) -> AnyView {
     match response {
         None => view! { <TableSkeleton columns=7 /> }.into_any(),
@@ -147,9 +154,57 @@ fn table_results(response: Option<&Result<Vec<LiftingResult>, String>>) -> AnyVi
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn meet(name: &str, start_date: &str) -> Meet {
+        Meet {
+            name: name.to_owned(),
+            start_date: start_date.to_owned(),
+            end_date: start_date.to_owned(),
+            time_zone: "America/Los_Angeles".to_owned(),
+            venue_city: String::new(),
+            venue_name: String::new(),
+            venue_state: String::new(),
+            venue_street: String::new(),
+            venue_zip: String::new(),
+            status: "Published".to_owned(),
+            venue_map_pdf_url: None,
+            venue_map_apple_url: None,
+        }
+    }
+
     #[test]
     fn absent_sessions_use_dash() {
         assert_eq!(session(None), "—");
         assert_eq!(session(Some(3.0)), "3");
+    }
+
+    #[test]
+    fn meet_catalog_is_newest_first_and_deduplicated() {
+        let upcoming = [meet("Older", "2026-01-01"), meet("Duplicate", "2026-02-01")];
+        let completed = [
+            meet("Duplicate", "2025-02-01"),
+            meet("Newest", "2026-03-01"),
+        ];
+        let catalog = meet_catalog(&upcoming, &completed);
+        assert_eq!(
+            catalog
+                .iter()
+                .map(|row| row.name.as_str())
+                .collect::<Vec<_>>(),
+            ["Newest", "Duplicate", "Older"]
+        );
+    }
+
+    #[test]
+    fn meet_suggestions_require_three_characters_and_are_limited() {
+        let meets = [
+            meet("National Championships", "2026-01-01"),
+            meet("National Open", "2025-01-01"),
+        ];
+        assert!(meet_suggestions(&meets, "na", 8).is_empty());
+        assert_eq!(
+            meet_suggestions(&meets, "nat", 1),
+            ["National Championships"]
+        );
     }
 }

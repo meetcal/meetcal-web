@@ -69,8 +69,83 @@ pub(crate) fn matches_filter(value: &str, selected: &str) -> bool {
     selected.is_empty() || value == selected
 }
 
+pub(crate) trait ClassifiedRow {
+    fn gender(&self) -> &str;
+    fn age_category(&self) -> &str;
+    fn weight_class(&self) -> &str;
+}
+
+pub(crate) struct ClassificationFilters<'a> {
+    pub gender: &'a str,
+    pub age_category: &'a str,
+    pub weight_class: &'a str,
+}
+
+pub(crate) fn classified_rows<'a, T, F>(
+    rows: &'a [T],
+    filters: &ClassificationFilters<'_>,
+    include: F,
+) -> Vec<&'a T>
+where
+    T: ClassifiedRow,
+    F: Fn(&T) -> bool,
+{
+    rows.iter()
+        .filter(|row| {
+            matches_filter(row.gender(), filters.gender)
+                && matches_filter(row.age_category(), filters.age_category)
+                && matches_filter(row.weight_class(), filters.weight_class)
+                && include(row)
+        })
+        .collect()
+}
+
+#[derive(Clone, Copy)]
+pub(crate) enum SortDirection {
+    Ascending,
+    Descending,
+}
+
+pub(crate) fn sort_numeric<T, F>(rows: &mut [&T], value: F, direction: SortDirection)
+where
+    F: Fn(&T) -> f64,
+{
+    rows.sort_by(|left, right| {
+        let ordering = value(left).total_cmp(&value(right));
+        match direction {
+            SortDirection::Ascending => ordering,
+            SortDirection::Descending => ordering.reverse(),
+        }
+    });
+}
+
+pub(crate) fn sort_text<T, F>(rows: &mut [&T], value: F, direction: SortDirection)
+where
+    F: Fn(&T) -> &str,
+{
+    rows.sort_by(|left, right| {
+        let ordering = value(left).cmp(value(right));
+        match direction {
+            SortDirection::Ascending => ordering,
+            SortDirection::Descending => ordering.reverse(),
+        }
+    });
+}
+
 pub(crate) fn yes_no(value: bool) -> &'static str {
     if value { "Yes" } else { "No" }
+}
+
+pub(crate) async fn load_meet_data<T: serde::de::DeserializeOwned>(
+    meet: String,
+    path: &str,
+) -> Result<Vec<T>, String> {
+    if meet.is_empty() {
+        return Ok(Vec::new());
+    }
+    crate::utils::api::get_api_response_with_query(path, &models::MeetQuery { meet })
+        .await
+        .map_err(|error| error.to_string())
 }
 
 pub(crate) fn format_us_date(value: &str) -> String {
@@ -145,6 +220,20 @@ pub(crate) fn SelectOptions(values: Vec<String>, selected: Option<String>) -> im
 }
 
 #[component]
+pub(crate) fn DataMetric(label: &'static str, value: String) -> impl IntoView {
+    view! { <div class="data-metric"><span>{label}</span><strong>{value}</strong></div> }
+}
+
+#[component]
+pub(crate) fn DataTable(children: Children) -> impl IntoView {
+    view! {
+        <div class="data-table-wrap">
+            <table class="data-table">{children()}</table>
+        </div>
+    }
+}
+
+#[component]
 pub(crate) fn TableSkeleton(columns: usize) -> impl IntoView {
     let header_cells = (0..columns)
         .map(|_| view! { <th><span class="data-skeleton"></span></th> })
@@ -182,6 +271,25 @@ pub(crate) fn EmptyTableRow(columns: usize, message: &'static str) -> impl IntoV
 mod tests {
     use super::*;
 
+    struct TestClassifiedRow {
+        gender: &'static str,
+        age: &'static str,
+        weight: &'static str,
+        active: bool,
+    }
+
+    impl ClassifiedRow for TestClassifiedRow {
+        fn gender(&self) -> &str {
+            self.gender
+        }
+        fn age_category(&self) -> &str {
+            self.age
+        }
+        fn weight_class(&self) -> &str {
+            self.weight
+        }
+    }
+
     #[test]
     fn filter_options_are_trimmed_sorted_unique_and_nonempty() {
         let options = filter_options(["  Women ", "Men", "", "Men", "   ", "Youth"].into_iter());
@@ -206,6 +314,65 @@ mod tests {
         assert!(matches_filter("Senior", ""));
         assert!(matches_filter("Senior", "Senior"));
         assert!(!matches_filter("Junior", "Senior"));
+    }
+
+    #[test]
+    fn generic_classification_filter_combines_shared_and_page_rules() {
+        let rows = [
+            TestClassifiedRow {
+                gender: "Women",
+                age: "Senior",
+                weight: "69kg",
+                active: true,
+            },
+            TestClassifiedRow {
+                gender: "Women",
+                age: "Junior",
+                weight: "69kg",
+                active: true,
+            },
+            TestClassifiedRow {
+                gender: "Women",
+                age: "Senior",
+                weight: "69kg",
+                active: false,
+            },
+        ];
+        let filters = ClassificationFilters {
+            gender: "Women",
+            age_category: "Senior",
+            weight_class: "69kg",
+        };
+
+        let filtered = classified_rows(&rows, &filters, |row| row.active);
+
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].age, "Senior");
+    }
+
+    #[test]
+    fn generic_sort_helpers_handle_both_directions() {
+        struct Row {
+            name: &'static str,
+            total: f64,
+        }
+        let rows = [
+            Row {
+                name: "Bravo",
+                total: 200.0,
+            },
+            Row {
+                name: "Alpha",
+                total: 250.0,
+            },
+        ];
+        let mut sorted = rows.iter().collect::<Vec<_>>();
+
+        sort_numeric(&mut sorted, |row| row.total, SortDirection::Descending);
+        assert_eq!(sorted[0].total, 250.0);
+
+        sort_text(&mut sorted, |row| row.name, SortDirection::Ascending);
+        assert_eq!(sorted[0].name, "Alpha");
     }
 
     #[test]

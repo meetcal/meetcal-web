@@ -1,6 +1,6 @@
 use super::{
-    EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter,
-    weight_class_options,
+    ClassificationFilters, ClassifiedRow, EmptyTableRow, SelectOptions, SortDirection,
+    TableSkeleton, classified_rows, filter_options, sort_numeric, weight_class_options,
 };
 use crate::{
     components::{footer::Footer, header::Header},
@@ -16,6 +16,18 @@ struct Standard {
     standard_a: f64,
     standard_b: f64,
     weight_class: String,
+}
+
+impl ClassifiedRow for Standard {
+    fn gender(&self) -> &str {
+        &self.gender
+    }
+    fn age_category(&self) -> &str {
+        &self.age_category
+    }
+    fn weight_class(&self) -> &str {
+        &self.weight_class
+    }
 }
 
 #[component]
@@ -49,28 +61,14 @@ pub fn Standards() -> impl IntoView {
                     let selected_gender = gender.get();
                     let selected_age = age.get();
                     let selected_weight = weight_class.get();
-                    let mut filtered_standards = rows
-                        .iter()
-                        .filter(|row| {
-                            matches_filter(&row.gender, &selected_gender)
-                                && matches_filter(&row.age_category, &selected_age)
-                                && matches_filter(&row.weight_class, &selected_weight)
-                        })
-                        .collect::<Vec<_>>();
+                    let filters = ClassificationFilters { gender: &selected_gender, age_category: &selected_age, weight_class: &selected_weight };
+                    let mut filtered_standards = classified_rows(rows, &filters, |_| true);
 
                     match sort.get().as_str() {
-                        "standard_a_asc" => filtered_standards.sort_by(|left, right| {
-                            left.standard_a.total_cmp(&right.standard_a)
-                        }),
-                        "standard_b_desc" => filtered_standards.sort_by(|left, right| {
-                            right.standard_b.total_cmp(&left.standard_b)
-                        }),
-                        "standard_b_asc" => filtered_standards.sort_by(|left, right| {
-                            left.standard_b.total_cmp(&right.standard_b)
-                        }),
-                        _ => filtered_standards.sort_by(|left, right| {
-                            right.standard_a.total_cmp(&left.standard_a)
-                        }),
+                        "standard_a_asc" => sort_numeric(&mut filtered_standards, |row| row.standard_a, SortDirection::Ascending),
+                        "standard_b_desc" => sort_numeric(&mut filtered_standards, |row| row.standard_b, SortDirection::Descending),
+                        "standard_b_asc" => sort_numeric(&mut filtered_standards, |row| row.standard_b, SortDirection::Ascending),
+                        _ => sort_numeric(&mut filtered_standards, |row| row.standard_a, SortDirection::Descending),
                     }
                     let is_empty = filtered_standards.is_empty();
                     let rows = filtered_standards

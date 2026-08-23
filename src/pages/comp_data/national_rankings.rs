@@ -1,4 +1,4 @@
-use super::{EmptyTableRow, SelectOptions, TableSkeleton};
+use super::{DataTable, EmptyTableRow, SelectOptions, SortDirection, TableSkeleton, sort_numeric};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response_with_query,
@@ -14,7 +14,7 @@ struct NationalRankingQuery {
     year: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize)]
 struct NationalRanking {
     name: String,
     total: f64,
@@ -140,83 +140,7 @@ pub fn NationalRankings() -> impl IntoView {
                 "Find each athlete’s best total for a USAW or USAMW division. Add a year to limit the rankings to that season."
             </p>
 
-            <form class="data-query-form" on:submit=move |event| {
-                event.prevent_default();
-                let age_category = division.get().trim().to_owned();
-                if !age_category.is_empty() {
-                    let selected_year = year.get().trim().to_owned();
-                    set_request.set(Some(NationalRankingQuery {
-                        federation: federation.get(),
-                        age_category,
-                        year: (!selected_year.is_empty()).then_some(selected_year),
-                    }));
-                }
-            }>
-                <label>
-                    "Federation"
-                    <select class="data-filter" on:change=move |event| set_federation.set(event_target_value(&event))>
-                        <option value="USAW">"USAW"</option>
-                        <option value="USAMW">"USAMW"</option>
-                    </select>
-                </label>
-                <label>
-                    "Gender"
-                    <select class="data-filter" on:change=move |event| {
-                        let selected_gender = event_target_value(&event);
-                        let next_division = division_options(&selected_gender, &age_group.get())
-                            .into_iter()
-                            .next()
-                            .unwrap_or_default();
-                        set_gender.set(selected_gender);
-                        set_division.set(next_division);
-                    }>
-                        <option value="Men">"Men"</option>
-                        <option value="Women">"Women"</option>
-                    </select>
-                </label>
-                <label>
-                    "Age group"
-                    <select class="data-filter" on:change=move |event| {
-                        let selected_age_group = event_target_value(&event);
-                        let next_division = division_options(&gender.get(), &selected_age_group)
-                            .into_iter()
-                            .next()
-                            .unwrap_or_default();
-                        set_age_group.set(selected_age_group);
-                        set_division.set(next_division);
-                    }>
-                        {AGE_GROUPS.iter().map(|age_group| view! {
-                            <option value=*age_group selected=*age_group == "Senior">{*age_group}</option>
-                        }).collect_view()}
-                    </select>
-                </label>
-                <label class="data-query-grow">
-                    "Division"
-                    <select
-                        class="data-filter"
-                        required=true
-                        prop:value=move || division.get()
-                        on:change=move |event| set_division.set(event_target_value(&event))
-                    >
-                        {move || {
-                            let selected_division = division.get();
-                            let options = division_options(&gender.get(), &age_group.get());
-                            view! { <SelectOptions values=options selected=Some(selected_division) /> }
-                        }}
-                    </select>
-                </label>
-                <label>
-                    "Year (optional)"
-                    <input
-                        class="data-filter data-year-input"
-                        inputmode="numeric"
-                        maxlength="4"
-                        placeholder="All time"
-                        on:input=move |event| set_year.set(event_target_value(&event))
-                    />
-                </label>
-                <button class="data-search-button" type="submit">"View rankings"</button>
-            </form>
+            <NationalRankingsForm federation set_federation gender set_gender age_group set_age_group division set_division year set_year set_request />
             <p class="data-help">"Division choices match the gender, age group, and weight classes used in the MeetCal app."</p>
 
             {move || rankings.with(|response| match response {
@@ -227,34 +151,53 @@ pub fn NationalRankings() -> impl IntoView {
                 Some(Ok(_)) if request.get().is_none() => view! {
                     <p class="data-status">"Enter a division to view its national rankings."</p>
                 }.into_any(),
-                Some(Ok(rankings)) => {
-                    let mut ranked = rankings.iter().collect::<Vec<_>>();
-                    ranked.sort_by(|left, right| right.total.total_cmp(&left.total));
-                    let rows = ranked.into_iter().enumerate().map(|(index, row)| view! {
-                        <tr>
-                            <td>{index + 1}</td>
-                            <td>{row.name.clone()}</td>
-                            <td>{row.total}</td>
-                            <td>{row.date.clone().unwrap_or_else(|| "—".to_owned())}</td>
-                        </tr>
-                    }).collect_view();
-                    let empty = rankings.is_empty().then(|| view! {
-                        <EmptyTableRow columns=4 message="No rankings matched this federation and division." />
-                    });
-
-                    view! {
-                        <div class="data-table-wrap">
-                            <table class="data-table">
-                                <thead><tr><th>"Rank"</th><th>"Athlete"</th><th>"Total"</th><th>"Date"</th></tr></thead>
-                                <tbody>{empty}{rows}</tbody>
-                            </table>
-                        </div>
-                    }.into_any()
-                }
+                Some(Ok(rankings)) => view! { <NationalRankingsTable rankings=rankings.clone() /> }.into_any(),
             })}
         </section>
         <Footer />
     }
+}
+
+#[component]
+fn NationalRankingsForm(
+    federation: ReadSignal<String>,
+    set_federation: WriteSignal<String>,
+    gender: ReadSignal<String>,
+    set_gender: WriteSignal<String>,
+    age_group: ReadSignal<String>,
+    set_age_group: WriteSignal<String>,
+    division: ReadSignal<String>,
+    set_division: WriteSignal<String>,
+    year: ReadSignal<String>,
+    set_year: WriteSignal<String>,
+    set_request: WriteSignal<Option<NationalRankingQuery>>,
+) -> impl IntoView {
+    view! {
+        <form class="data-query-form" on:submit=move |event| {
+            event.prevent_default();
+            let age_category = division.get().trim().to_owned();
+            if !age_category.is_empty() {
+                let selected_year = year.get().trim().to_owned();
+                set_request.set(Some(NationalRankingQuery { federation: federation.get(), age_category, year: (!selected_year.is_empty()).then_some(selected_year) }));
+            }
+        }>
+            <label>"Federation"<select class="data-filter" on:change=move |event| set_federation.set(event_target_value(&event))><option value="USAW">"USAW"</option><option value="USAMW">"USAMW"</option></select></label>
+            <label>"Gender"<select class="data-filter" on:change=move |event| { let selected = event_target_value(&event); let next = division_options(&selected, &age_group.get()).into_iter().next().unwrap_or_default(); set_gender.set(selected); set_division.set(next); }><option value="Men">"Men"</option><option value="Women">"Women"</option></select></label>
+            <label>"Age group"<select class="data-filter" on:change=move |event| { let selected = event_target_value(&event); let next = division_options(&gender.get(), &selected).into_iter().next().unwrap_or_default(); set_age_group.set(selected); set_division.set(next); }>{AGE_GROUPS.iter().map(|age| view! { <option value=*age selected=*age == "Senior">{*age}</option> }).collect_view()}</select></label>
+            <label class="data-query-grow">"Division"<select class="data-filter" required=true prop:value=move || division.get() on:change=move |event| set_division.set(event_target_value(&event))>{move || view! { <SelectOptions values=division_options(&gender.get(), &age_group.get()) selected=Some(division.get()) /> }}</select></label>
+            <label>"Year (optional)"<input class="data-filter data-year-input" inputmode="numeric" maxlength="4" placeholder="All time" on:input=move |event| set_year.set(event_target_value(&event)) /></label>
+            <button class="data-search-button" type="submit">"View rankings"</button>
+        </form>
+    }
+}
+
+#[component]
+fn NationalRankingsTable(rankings: Vec<NationalRanking>) -> impl IntoView {
+    let mut ranked = rankings.iter().collect::<Vec<_>>();
+    sort_numeric(&mut ranked, |row| row.total, SortDirection::Descending);
+    let rows = ranked.into_iter().enumerate().map(|(index, row)| view! { <tr><td>{index + 1}</td><td>{row.name.clone()}</td><td>{row.total}</td><td>{row.date.clone().unwrap_or_else(|| "—".to_owned())}</td></tr> }).collect_view();
+    let empty = rankings.is_empty().then(|| view! { <EmptyTableRow columns=4 message="No rankings matched this federation and division." /> });
+    view! { <DataTable><thead><tr><th>"Rank"</th><th>"Athlete"</th><th>"Total"</th><th>"Date"</th></tr></thead><tbody>{empty}{rows}</tbody></DataTable> }
 }
 
 #[cfg(test)]

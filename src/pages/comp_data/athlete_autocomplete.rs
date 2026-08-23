@@ -1,16 +1,6 @@
+use super::models::{AthleteSearchQuery, AthleteSearchResponse};
 use crate::utils::api::get_api_response_with_query;
 use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Serialize)]
-struct SuggestionQuery {
-    query: String,
-}
-
-#[derive(Clone, Deserialize)]
-struct SuggestionResponse {
-    suggestions: Vec<String>,
-}
 
 #[component]
 pub(crate) fn AthleteAutocomplete(
@@ -26,9 +16,9 @@ pub(crate) fn AthleteAutocomplete(
             if query.chars().count() < 3 {
                 Ok(Vec::new())
             } else {
-                get_api_response_with_query::<SuggestionResponse, _>(
+                get_api_response_with_query::<AthleteSearchResponse, _>(
                     "/search",
-                    &SuggestionQuery { query },
+                    &AthleteSearchQuery::suggestions(query),
                 )
                 .await
                 .map(|response| response.suggestions)

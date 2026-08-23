@@ -1,6 +1,6 @@
 use super::{
-    EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter,
-    weight_class_options,
+    ClassificationFilters, ClassifiedRow, DataTable, EmptyTableRow, SelectOptions, SortDirection,
+    TableSkeleton, classified_rows, filter_options, sort_numeric, sort_text, weight_class_options,
 };
 use crate::{
     components::{footer::Footer, header::Header},
@@ -16,6 +16,18 @@ pub struct QualifyingTotal {
     pub gender: String,
     pub age_category: String,
     pub weight_class: String,
+}
+
+impl ClassifiedRow for QualifyingTotal {
+    fn gender(&self) -> &str {
+        &self.gender
+    }
+    fn age_category(&self) -> &str {
+        &self.age_category
+    }
+    fn weight_class(&self) -> &str {
+        &self.weight_class
+    }
 }
 
 #[component]
@@ -59,29 +71,16 @@ pub fn QualifyingTotals() -> impl IntoView {
                         let selected_gender = gender.get();
                         let selected_age = age.get();
                         let selected_weight = weight_class.get();
-                        let mut filtered_totals = rows
-                            .iter()
-                            .filter(|row| {
-                                (selected_meet.is_empty() || row.event_name == selected_meet)
-                                    && matches_filter(&row.gender, &selected_gender)
-                                    && matches_filter(&row.age_category, &selected_age)
-                                    && matches_filter(&row.weight_class, &selected_weight)
-                            })
-                            .collect::<Vec<_>>();
+                        let filters = ClassificationFilters { gender: &selected_gender, age_category: &selected_age, weight_class: &selected_weight };
+                        let mut filtered_totals = classified_rows(rows, &filters, |row| {
+                            selected_meet.is_empty() || row.event_name == selected_meet
+                        });
 
                         match sort.get().as_str() {
-                            "total_desc" => filtered_totals.sort_by(|left, right| {
-                                right.qualifying_total.total_cmp(&left.qualifying_total)
-                            }),
-                            "event_asc" => filtered_totals.sort_by(|left, right| {
-                                left.event_name.cmp(&right.event_name)
-                            }),
-                            "event_desc" => filtered_totals.sort_by(|left, right| {
-                                right.event_name.cmp(&left.event_name)
-                            }),
-                            _ => filtered_totals.sort_by(|left, right| {
-                                left.qualifying_total.total_cmp(&right.qualifying_total)
-                            }),
+                            "total_desc" => sort_numeric(&mut filtered_totals, |row| row.qualifying_total, SortDirection::Descending),
+                            "event_asc" => sort_text(&mut filtered_totals, |row| &row.event_name, SortDirection::Ascending),
+                            "event_desc" => sort_text(&mut filtered_totals, |row| &row.event_name, SortDirection::Descending),
+                            _ => sort_numeric(&mut filtered_totals, |row| row.qualifying_total, SortDirection::Ascending),
                         }
                         let is_empty = filtered_totals.is_empty();
                         let rows = filtered_totals
@@ -178,16 +177,5 @@ mod tests {
 
         assert_eq!(total.event_name, "Nationals");
         assert_eq!(total.qualifying_total, 215.5);
-    }
-}
-
-#[component]
-pub fn DataTable(children: Children) -> impl IntoView {
-    view! {
-        <div class="data-table-wrap">
-            <table class="data-table">
-                {children()}
-            </table>
-        </div>
     }
 }

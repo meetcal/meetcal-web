@@ -1,8 +1,8 @@
 use super::{
-    TableSkeleton,
+    DataMetric, TableSkeleton,
     analytics::{WrappedStats, wrapped_stats},
     athlete_autocomplete::AthleteAutocomplete,
-    models::LiftingResult,
+    models::{AthleteSearchQuery, AthleteSearchResponse},
 };
 use crate::{
     components::{footer::Footer, header::Header},
@@ -10,20 +10,6 @@ use crate::{
 };
 use js_sys::Date;
 use leptos::prelude::*;
-use serde::{Deserialize, Serialize};
-
-#[derive(Clone, Serialize)]
-struct SearchQuery {
-    query: String,
-    start_date: String,
-    end_date: String,
-}
-#[derive(Clone, Deserialize)]
-struct SearchResponse {
-    matched_name: Option<String>,
-    suggestions: Vec<String>,
-    results: Vec<LiftingResult>,
-}
 #[derive(Clone)]
 struct WrappedRequest {
     athlete: String,
@@ -60,12 +46,12 @@ pub fn Wrapped() -> impl IntoView {
 }
 
 async fn athlete(name: &str, year: i32) -> Result<(String, WrappedStats), String> {
-    let query = SearchQuery {
-        query: name.to_owned(),
-        start_date: format!("{year:04}-01-01"),
-        end_date: format!("{:04}-01-01", year + 1),
-    };
-    let response: SearchResponse = get_api_response_with_query("/search", &query)
+    let query = AthleteSearchQuery::between(
+        name.to_owned(),
+        format!("{year:04}-01-01"),
+        format!("{:04}-01-01", year + 1),
+    );
+    let response: AthleteSearchResponse = get_api_response_with_query("/search", &query)
         .await
         .map_err(|error| error.to_string())?;
     if response.results.is_empty() {
@@ -89,12 +75,9 @@ async fn load_wrapped(request: WrappedRequest) -> Result<Option<WrappedResponse>
     }))
 }
 
-fn metric(label: &'static str, value: String) -> impl IntoView {
-    view! { <div class="data-metric"><span>{label}</span><strong>{value}</strong></div> }
-}
 fn report(response: &WrappedResponse, year: i32) -> AnyView {
     let stats = &response.stats;
-    view! { <h2 class="data-section-title">{format!("{year} wrapped — {}", response.athlete_name)}</h2><div class="data-metric-grid">{metric("Meets", stats.total_meets.to_string())}{metric("Make rate", format!("{:.1}%", stats.make_percentage))}{metric("Best snatch", format!("{}kg", stats.best_snatch))}{metric("Best C&J", format!("{}kg", stats.best_cj))}{metric("Best total", format!("{}kg", stats.best_total))}{metric("Average total", format!("{:.1}kg", stats.average_total))}{metric("Weight lifted", format!("{}kg", stats.total_weight_lifted))}{metric("First-to-last", format!("{:+}kg", stats.improvement))}{metric("Longest make streak", stats.longest_streak.to_string())}{metric("Favorite attempt", stats.favorite_attempt.map(|value| value.to_string()).unwrap_or_else(|| "—".to_owned()))}</div><div class="wrapped-top-meet"><span>"Top meet"</span><strong>{stats.top_meet.clone().unwrap_or_else(|| "—".to_owned())}</strong></div> }.into_any()
+    view! { <h2 class="data-section-title">{format!("{year} wrapped — {}", response.athlete_name)}</h2><div class="data-metric-grid"><DataMetric label="Meets" value=stats.total_meets.to_string() /><DataMetric label="Make rate" value=format!("{:.1}%", stats.make_percentage) /><DataMetric label="Best snatch" value=format!("{}kg", stats.best_snatch) /><DataMetric label="Best C&J" value=format!("{}kg", stats.best_cj) /><DataMetric label="Best total" value=format!("{}kg", stats.best_total) /><DataMetric label="Average total" value=format!("{:.1}kg", stats.average_total) /><DataMetric label="Weight lifted" value=format!("{}kg", stats.total_weight_lifted) /><DataMetric label="First-to-last" value=format!("{:+}kg", stats.improvement) /><DataMetric label="Longest make streak" value=stats.longest_streak.to_string() /><DataMetric label="Favorite attempt" value=stats.favorite_attempt.map(|value| value.to_string()).unwrap_or_else(|| "—".to_owned()) /></div><div class="wrapped-top-meet"><span>"Top meet"</span><strong>{stats.top_meet.clone().unwrap_or_else(|| "—".to_owned())}</strong></div> }.into_any()
 }
 
 #[cfg(test)]
@@ -102,11 +85,11 @@ mod tests {
     use super::*;
     #[test]
     fn search_query_uses_exclusive_next_year() {
-        let query = serde_urlencoded::to_string(SearchQuery {
-            query: "Test Athlete".to_owned(),
-            start_date: "2026-01-01".to_owned(),
-            end_date: "2027-01-01".to_owned(),
-        })
+        let query = serde_urlencoded::to_string(AthleteSearchQuery::between(
+            "Test Athlete".to_owned(),
+            "2026-01-01".to_owned(),
+            "2027-01-01".to_owned(),
+        ))
         .unwrap();
         assert!(query.contains("end_date=2027-01-01"));
     }

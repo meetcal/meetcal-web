@@ -1,6 +1,6 @@
 use super::{
-    EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter,
-    weight_class_options,
+    ClassificationFilters, ClassifiedRow, EmptyTableRow, SelectOptions, SortDirection,
+    TableSkeleton, classified_rows, filter_options, sort_numeric, weight_class_options,
 };
 use crate::{
     components::{footer::Footer, header::Header},
@@ -19,6 +19,18 @@ struct Ranking {
     percent_a: f64,
     gender: String,
     age_category: String,
+}
+
+impl ClassifiedRow for Ranking {
+    fn gender(&self) -> &str {
+        &self.gender
+    }
+    fn age_category(&self) -> &str {
+        &self.age_category
+    }
+    fn weight_class(&self) -> &str {
+        &self.weight_class
+    }
 }
 
 #[component]
@@ -55,29 +67,18 @@ pub fn Rankings() -> impl IntoView {
                     let selected_gender = gender.get();
                     let selected_age = age.get();
                     let selected_weight = weight_class.get();
-                    let mut filtered_rankings = rankings
-                        .iter()
-                        .filter(|ranking| {
-                            (selected_meet.is_empty() || ranking.meet == selected_meet)
-                                && matches_filter(&ranking.gender, &selected_gender)
-                                && matches_filter(&ranking.age_category, &selected_age)
-                                && matches_filter(&ranking.weight_class, &selected_weight)
-                        })
-                        .collect::<Vec<_>>();
+                    let filters = ClassificationFilters { gender: &selected_gender, age_category: &selected_age, weight_class: &selected_weight };
+                    let mut filtered_rankings = classified_rows(rankings, &filters, |ranking| {
+                        selected_meet.is_empty() || ranking.meet == selected_meet
+                    });
 
                     match sort.get().as_str() {
-                        "rank_desc" => filtered_rankings
-                            .sort_by(|left, right| right.ranking.total_cmp(&left.ranking)),
-                        "percent_a_desc" => filtered_rankings
-                            .sort_by(|left, right| right.percent_a.total_cmp(&left.percent_a)),
-                        "percent_a_asc" => filtered_rankings
-                            .sort_by(|left, right| left.percent_a.total_cmp(&right.percent_a)),
-                        "total_desc" => filtered_rankings
-                            .sort_by(|left, right| right.total.total_cmp(&left.total)),
-                        "total_asc" => filtered_rankings
-                            .sort_by(|left, right| left.total.total_cmp(&right.total)),
-                        _ => filtered_rankings
-                            .sort_by(|left, right| left.ranking.total_cmp(&right.ranking)),
+                        "rank_desc" => sort_numeric(&mut filtered_rankings, |row| row.ranking, SortDirection::Descending),
+                        "percent_a_desc" => sort_numeric(&mut filtered_rankings, |row| row.percent_a, SortDirection::Descending),
+                        "percent_a_asc" => sort_numeric(&mut filtered_rankings, |row| row.percent_a, SortDirection::Ascending),
+                        "total_desc" => sort_numeric(&mut filtered_rankings, |row| row.total, SortDirection::Descending),
+                        "total_asc" => sort_numeric(&mut filtered_rankings, |row| row.total, SortDirection::Ascending),
+                        _ => sort_numeric(&mut filtered_rankings, |row| row.ranking, SortDirection::Ascending),
                     }
                     let is_empty = filtered_rankings.is_empty();
                     let rows = filtered_rankings

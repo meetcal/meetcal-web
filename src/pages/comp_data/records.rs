@@ -1,6 +1,6 @@
 use super::{
-    EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter,
-    weight_class_options,
+    ClassificationFilters, ClassifiedRow, EmptyTableRow, SelectOptions, SortDirection,
+    TableSkeleton, classified_rows, filter_options, sort_numeric, weight_class_options,
 };
 use crate::{
     components::{footer::Footer, header::Header},
@@ -18,6 +18,18 @@ struct Record {
     snatch_record: f64,
     cj_record: f64,
     total_record: f64,
+}
+
+impl ClassifiedRow for Record {
+    fn gender(&self) -> &str {
+        &self.gender
+    }
+    fn age_category(&self) -> &str {
+        &self.age_category
+    }
+    fn weight_class(&self) -> &str {
+        &self.weight_class
+    }
 }
 
 #[component]
@@ -59,36 +71,19 @@ pub fn Records() -> impl IntoView {
                     let selected_gender = gender.get();
                     let selected_age = age.get();
                     let selected_weight = weight_class.get();
-                    let mut filtered_records = records
-                        .iter()
-                        .filter(|record| {
-                            (selected_type.is_empty() || record.record_type == selected_type)
-                                && matches_filter(&record.gender, &selected_gender)
-                                && matches_filter(&record.age_category, &selected_age)
-                                && matches_filter(&record.weight_class, &selected_weight)
-                                && record.record_type != "BWL"
-                        })
-                        .collect::<Vec<_>>();
+                    let filters = ClassificationFilters { gender: &selected_gender, age_category: &selected_age, weight_class: &selected_weight };
+                    let mut filtered_records = classified_rows(records, &filters, |record| {
+                        (selected_type.is_empty() || record.record_type == selected_type)
+                            && record.record_type != "BWL"
+                    });
 
                     match sort.get().as_str() {
-                        "snatch_desc" => filtered_records.sort_by(|left, right| {
-                            right.snatch_record.total_cmp(&left.snatch_record)
-                        }),
-                        "snatch_asc" => filtered_records.sort_by(|left, right| {
-                            left.snatch_record.total_cmp(&right.snatch_record)
-                        }),
-                        "cj_desc" => filtered_records.sort_by(|left, right| {
-                            right.cj_record.total_cmp(&left.cj_record)
-                        }),
-                        "cj_asc" => filtered_records.sort_by(|left, right| {
-                            left.cj_record.total_cmp(&right.cj_record)
-                        }),
-                        "total_asc" => filtered_records.sort_by(|left, right| {
-                            left.total_record.total_cmp(&right.total_record)
-                        }),
-                        _ => filtered_records.sort_by(|left, right| {
-                            right.total_record.total_cmp(&left.total_record)
-                        }),
+                        "snatch_desc" => sort_numeric(&mut filtered_records, |row| row.snatch_record, SortDirection::Descending),
+                        "snatch_asc" => sort_numeric(&mut filtered_records, |row| row.snatch_record, SortDirection::Ascending),
+                        "cj_desc" => sort_numeric(&mut filtered_records, |row| row.cj_record, SortDirection::Descending),
+                        "cj_asc" => sort_numeric(&mut filtered_records, |row| row.cj_record, SortDirection::Ascending),
+                        "total_asc" => sort_numeric(&mut filtered_records, |row| row.total_record, SortDirection::Ascending),
+                        _ => sort_numeric(&mut filtered_records, |row| row.total_record, SortDirection::Descending),
                     }
                     let is_empty = filtered_records.is_empty();
                     let rows = filtered_records

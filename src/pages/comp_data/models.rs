@@ -41,10 +41,9 @@ pub(crate) struct Athlete {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub(crate) struct LiftingResult {
+pub(crate) struct LiftResult {
     pub meet: String,
     pub date: String,
-    pub name: String,
     pub age: String,
     pub body_weight: f64,
     pub snatch1: f64,
@@ -57,6 +56,55 @@ pub(crate) struct LiftingResult {
     pub cj_best: f64,
     pub total: f64,
     pub adaptive: bool,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct LiftingResult {
+    pub name: String,
+    #[serde(flatten)]
+    pub result: LiftResult,
+}
+
+impl std::ops::Deref for LiftingResult {
+    type Target = LiftResult;
+
+    fn deref(&self) -> &Self::Target {
+        &self.result
+    }
+}
+
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct AthleteSearchQuery {
+    pub query: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
+}
+
+impl AthleteSearchQuery {
+    pub(crate) fn suggestions(query: String) -> Self {
+        Self {
+            query,
+            start_date: None,
+            end_date: None,
+        }
+    }
+
+    pub(crate) fn between(query: String, start_date: String, end_date: String) -> Self {
+        Self {
+            query,
+            start_date: Some(start_date),
+            end_date: Some(end_date),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct AthleteSearchResponse {
+    pub matched_name: Option<String>,
+    pub suggestions: Vec<String>,
+    pub results: Vec<LiftResult>,
 }
 
 #[derive(Clone, Serialize)]
