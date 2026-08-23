@@ -1,6 +1,7 @@
 pub mod adaptive_records;
 pub(crate) mod analytics;
 pub(crate) mod athlete_autocomplete;
+pub mod catalog;
 pub mod club_dashboard;
 pub mod data_home;
 pub(crate) mod filters;

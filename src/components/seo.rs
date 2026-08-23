@@ -1,3 +1,4 @@
+use crate::pages::comp_data::catalog::DATA_PAGES;
 use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 
@@ -12,6 +13,10 @@ pub struct PageMetadata {
 }
 
 pub fn metadata_for_path(path: &str) -> PageMetadata {
+    if let Some(page) = DATA_PAGES.iter().find(|page| page.path == path) {
+        return competition_metadata(page.seo_title);
+    }
+
     match path {
         "/" => PageMetadata {
             title: "MeetCal — Weightlifting Meet Schedules & Competition Data",
@@ -39,18 +44,6 @@ pub fn metadata_for_path(path: &str) -> PageMetadata {
             indexable: false,
         },
         "/comp-data" => competition_metadata("Competition Data"),
-        "/qualifying-totals" => competition_metadata("Weightlifting Qualifying Totals"),
-        "/standards" => competition_metadata("Weightlifting Standards"),
-        "/results" => competition_metadata("Athlete Competition Results"),
-        "/rankings" => competition_metadata("International Weightlifting Rankings"),
-        "/national-rankings" => competition_metadata("National Weightlifting Rankings"),
-        "/records" => competition_metadata("Weightlifting Records"),
-        "/wso-records" => competition_metadata("USAW WSO Records"),
-        "/adaptive-records" => competition_metadata("Adaptive Weightlifting Records"),
-        "/meet-center" => competition_metadata("Weightlifting Meets, Schedules & Results"),
-        "/club-dashboard" => competition_metadata("Weightlifting Club Meet Dashboard"),
-        "/wso-dashboard" => competition_metadata("USAW WSO Meet Dashboard"),
-        "/wrapped" => competition_metadata("Weightlifting Athlete Wrapped"),
         _ => PageMetadata {
             title: "Page Not Found — MeetCal",
             description: "The requested MeetCal page could not be found.",

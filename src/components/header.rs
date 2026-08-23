@@ -1,6 +1,7 @@
 use crate::auth::{
     AuthContext, AuthState, mount_user_button, open_clerk_sign_in, unmount_user_button,
 };
+use crate::pages::comp_data::catalog::DATA_PAGES;
 use leptos::prelude::*;
 use leptos_router::components::A;
 
@@ -18,18 +19,10 @@ pub fn Header() -> impl IntoView {
                 <div class="nav-menu">
                     <A href="/comp-data" attr:class="nav-menu-trigger">"Competition Data"</A>
                     <div class="nav-menu-panel">
-                        <A href="/qualifying-totals">"Qualifying Totals"</A>
-                        <A href="/standards">"Standards"</A>
-                        <A href="/results">"Results"</A>
-                        <A href="/meet-center">"Meets"</A>
-                        <A href="/club-dashboard">"Club Dashboard"</A>
-                        <A href="/wso-dashboard">"WSO Dashboard"</A>
-                        <A href="/wrapped">"Athlete Wrapped"</A>
-                        <A href="/rankings">"Rankings"</A>
-                        <A href="/national-rankings">"National Rankings"</A>
-                        <A href="/records">"Records"</A>
-                        <A href="/wso-records">"WSO Records"</A>
-                        <A href="/adaptive-records">"Adaptive Records"</A>
+                        {DATA_PAGES
+                            .iter()
+                            .map(|page| view! { <A href=page.path>{page.label}</A> })
+                            .collect_view()}
                     </div>
                 </div>
                 <A href="/features">"Features"</A>

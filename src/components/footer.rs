@@ -4,9 +4,7 @@ use leptos_router::components::A;
 
 #[component]
 pub fn Footer() -> impl IntoView {
-    let current_date = Date::new_0();
-
-    let formatted_date = format!("{}", current_date.get_full_year(),);
+    let current_year = Date::new_0().get_full_year().to_string();
 
     view! {
         <footer class="site-footer">
@@ -15,7 +13,7 @@ pub fn Footer() -> impl IntoView {
                 "Download Now"
             </a>
 
-            <p>"© " {formatted_date} " MeetCal LLC. All rights reserved."</p>
+            <p>"© " {current_year} " MeetCal LLC. All rights reserved."</p>
             <nav class="footer-legal" aria-label="Legal">
                 <A href="/privacy">"Privacy Policy"</A>
                 <A href="/terms">"Terms of Use"</A>

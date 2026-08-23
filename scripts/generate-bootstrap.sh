@@ -89,5 +89,5 @@ adaptive-records|/adaptive-records|Adaptive Weightlifting Records
 meet-center|/meet-center|Weightlifting Meets, Schedules &amp; Results
 club-dashboard|/club-dashboard|Weightlifting Club Meet Dashboard
 wso-dashboard|/wso-dashboard|USAW WSO Meet Dashboard
-wrapped|/wrapped|Weightlifting Wrapped &amp; Athlete Comparisons
+wrapped|/wrapped|Weightlifting Athlete Wrapped
 EOF
