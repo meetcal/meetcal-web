@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 
 use super::{
-    EmptyTableRow, TableSkeleton, format_us_date, format_us_time, load_meet_data,
+    format::{format_us_date, format_us_time, yes_no},
+    loading::{load_error, load_meet_data, table_response},
     models::{Athlete, LiftingResult, Meet, ScheduleRow, attempt},
-    yes_no,
+    ui::{DataPage, DataStatus, DataTable, EmptyTableRow},
 };
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::get_api_response,
-};
+use crate::utils::api::get_api_response;
 use leptos::prelude::*;
 
 fn session(value: Option<f64>) -> String {
@@ -69,30 +67,28 @@ pub fn MeetCenter() -> impl IntoView {
         LocalResource::new(move || load_meet_data::<LiftingResult>(meet.get(), "/lifting-results"));
 
     view! {
-        <Header />
-        <section class="data-page">
-            <p class="data-eyebrow">"Competition data"</p>
-            <h1>"Meets"</h1>
-            <p class="data-intro">"Search all meets to see venue details, session schedules, start lists, and published results."</p>
+        <DataPage
+            heading="Meets"
+            intro="Search all meets to see venue details, session schedules, start lists, and published results."
+        >
             {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) {
                 (Some(Ok(upcoming)), Some(Ok(completed))) => {
                     let meets = meet_catalog(upcoming, completed);
                     view! { <MeetPicker meets meet set_meet meet_search set_meet_search /> }.into_any()
                 }
-                (Some(Err(error)), _) | (_, Some(Err(error))) => view! { <p class="data-status error">{format!("Could not load meets: {error}")}</p> }.into_any(),
-                _ => view! { <p class="data-status">"Loading meets…"</p> }.into_any(),
+                (Some(Err(error)), _) | (_, Some(Err(error))) => load_error("meets", error),
+                _ => view! { <DataStatus message="Loading meets…" /> }.into_any(),
             }))}
 
-            {move || if meet.get().is_empty() { view! { <p class="data-status">"Search for and select a meet to load its competition data."</p> }.into_any() } else { view! {
+            {move || if meet.get().is_empty() { view! { <DataStatus message="Search for and select a meet to load its competition data." /> }.into_any() } else { view! {
                 <h2 class="data-section-title">"Schedule"</h2>
-                {move || schedule.with(|response| table_schedule(response.as_ref()))}
+                {move || schedule.with(|response| table_response(response, 7, "schedule", table_schedule))}
                 <h2 class="data-section-title">"Start list"</h2>
-                {move || athletes.with(|response| table_athletes(response.as_ref()))}
+                {move || athletes.with(|response| table_response(response, 9, "start list", table_athletes))}
                 <h2 class="data-section-title">"Full results"</h2>
-                {move || results.with(|response| table_results(response.as_ref()))}
+                {move || results.with(|response| table_response(response, 13, "meet results", table_results))}
             }.into_any() }}
-        </section>
-        <Footer />
+        </DataPage>
     }
 }
 
@@ -129,34 +125,24 @@ fn MeetPicker(
     }
 }
 
-fn table_schedule(response: Option<&Result<Vec<ScheduleRow>, String>>) -> AnyView {
-    match response {
-        None => view! { <TableSkeleton columns=7 /> }.into_any(),
-        Some(Err(error)) => {
-            view! { <p class="data-status error">{format!("Could not load schedule: {error}")}</p> }
-                .into_any()
-        }
-        Some(Ok(rows)) => {
-            let body = rows.iter().map(|row| view! { <tr><td>{format_us_date(&row.date)}</td><td>{session(Some(row.session_id))}</td><td>{row.platform.clone()}</td><td>{row.weight_class.clone()}</td><td>{format_us_time(&row.weigh_in_time)}</td><td>{format_us_time(&row.start_time)}</td></tr> }).collect_view();
-            view! { <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Date"</th><th>"Session"</th><th>"Platform"</th><th>"Weight class"</th><th>"Weigh-in"</th><th>"Start"</th></tr></thead><tbody>{rows.is_empty().then(|| view! { <EmptyTableRow columns=6 message="No schedule has been published for this meet." /> })}{body}</tbody></table></div> }.into_any()
-        }
-    }
+fn table_schedule(rows: &[ScheduleRow]) -> AnyView {
+    let is_empty = rows.is_empty();
+    let body = rows.iter().map(|row| view! { <tr><td>{format_us_date(&row.date)}</td><td>{session(Some(row.session_id))}</td><td>{row.platform.clone()}</td><td>{row.weight_class.clone()}</td><td>{format_us_time(&row.weigh_in_time)}</td><td>{format_us_time(&row.start_time)}</td></tr> }).collect_view();
+    view! { <DataTable><thead><tr><th>"Date"</th><th>"Session"</th><th>"Platform"</th><th>"Weight class"</th><th>"Weigh-in"</th><th>"Start"</th></tr></thead><tbody>{is_empty.then(|| view! { <EmptyTableRow columns=6 message="No schedule has been published for this meet." /> })}{body}</tbody></DataTable> }.into_any()
 }
 
-fn table_athletes(response: Option<&Result<Vec<Athlete>, String>>) -> AnyView {
-    match response {
-        None => view! { <TableSkeleton columns=9 /> }.into_any(),
-        Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load start list: {error}")}</p> }.into_any(),
-        Some(Ok(rows)) => { let body = rows.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.gender.clone()}</td><td>{row.age}</td><td>{row.weight_class.clone()}</td><td>{row.entry_total}</td><td>{row.club.clone()}</td><td>{row.wso.clone().unwrap_or_else(|| "—".to_owned())}</td><td>{session(row.session_number)}</td><td>{row.session_platform.clone().unwrap_or_else(|| "—".to_owned())}</td><td>{yes_no(row.adaptive)}</td></tr> }).collect_view(); view! { <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Entry total"</th><th>"Club"</th><th>"WSO"</th><th>"Session"</th><th>"Platform"</th><th>"Adaptive"</th></tr></thead><tbody>{rows.is_empty().then(|| view! { <EmptyTableRow columns=10 message="No start list has been published for this meet." /> })}{body}</tbody></table></div> }.into_any() }
-    }
+fn table_athletes(rows: &[Athlete]) -> AnyView {
+    let is_empty = rows.is_empty();
+    let body = rows.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.gender.clone()}</td><td>{row.age}</td><td>{row.weight_class.clone()}</td><td>{row.entry_total}</td><td>{row.club.clone()}</td><td>{row.wso.clone().unwrap_or_else(|| "—".to_owned())}</td><td>{session(row.session_number)}</td><td>{row.session_platform.clone().unwrap_or_else(|| "—".to_owned())}</td><td>{yes_no(row.adaptive)}</td></tr> }).collect_view();
+    view! { <DataTable><thead><tr><th>"Athlete"</th><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Entry total"</th><th>"Club"</th><th>"WSO"</th><th>"Session"</th><th>"Platform"</th><th>"Adaptive"</th></tr></thead><tbody>{is_empty.then(|| view! { <EmptyTableRow columns=10 message="No start list has been published for this meet." /> })}{body}</tbody></DataTable> }.into_any()
 }
 
-fn table_results(response: Option<&Result<Vec<LiftingResult>, String>>) -> AnyView {
-    match response {
-        None => view! { <TableSkeleton columns=13 /> }.into_any(),
-        Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load meet results: {error}")}</p> }.into_any(),
-        Some(Ok(rows)) => { let mut rows = rows.iter().collect::<Vec<_>>(); rows.sort_by(|left, right| right.total.total_cmp(&left.total)); let body = rows.iter().map(|row| { let athlete_url = format!("/results?athlete={}", js_sys::encode_uri_component(&row.name)); view! { <tr><td><a class="data-athlete-link" href=athlete_url>{row.name.clone()}</a></td><td><strong>{row.total}</strong></td><td>{row.age.clone()}</td><td>{row.body_weight}</td><td>{attempt(row.snatch1)}</td><td>{attempt(row.snatch2)}</td><td>{attempt(row.snatch3)}</td><td>{row.snatch_best}</td><td>{attempt(row.cj1)}</td><td>{attempt(row.cj2)}</td><td>{attempt(row.cj3)}</td><td>{row.cj_best}</td><td>{yes_no(row.adaptive)}</td></tr> } }).collect_view(); view! { <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Total"</th><th>"Division"</th><th>"Bodyweight"</th><th>"S1"</th><th>"S2"</th><th>"S3"</th><th>"Best snatch"</th><th>"C&J 1"</th><th>"C&J 2"</th><th>"C&J 3"</th><th>"Best C&J"</th><th>"Adaptive"</th></tr></thead><tbody>{rows.is_empty().then(|| view! { <EmptyTableRow columns=13 message="No results have been published for this meet." /> })}{body}</tbody></table></div> }.into_any() }
-    }
+fn table_results(rows: &[LiftingResult]) -> AnyView {
+    let mut rows = rows.iter().collect::<Vec<_>>();
+    rows.sort_by(|left, right| right.total.total_cmp(&left.total));
+    let is_empty = rows.is_empty();
+    let body = rows.iter().map(|row| { let athlete_url = format!("/results?athlete={}", js_sys::encode_uri_component(&row.name)); view! { <tr><td><a class="data-athlete-link" href=athlete_url>{row.name.clone()}</a></td><td><strong>{row.total}</strong></td><td>{row.age.clone()}</td><td>{row.body_weight}</td><td>{attempt(row.snatch1)}</td><td>{attempt(row.snatch2)}</td><td>{attempt(row.snatch3)}</td><td>{row.snatch_best}</td><td>{attempt(row.cj1)}</td><td>{attempt(row.cj2)}</td><td>{attempt(row.cj3)}</td><td>{row.cj_best}</td><td>{yes_no(row.adaptive)}</td></tr> } }).collect_view();
+    view! { <DataTable><thead><tr><th>"Athlete"</th><th>"Total"</th><th>"Division"</th><th>"Bodyweight"</th><th>"S1"</th><th>"S2"</th><th>"S3"</th><th>"Best snatch"</th><th>"C&J 1"</th><th>"C&J 2"</th><th>"C&J 3"</th><th>"Best C&J"</th><th>"Adaptive"</th></tr></thead><tbody>{is_empty.then(|| view! { <EmptyTableRow columns=13 message="No results have been published for this meet." /> })}{body}</tbody></DataTable> }.into_any()
 }
 
 #[cfg(test)]

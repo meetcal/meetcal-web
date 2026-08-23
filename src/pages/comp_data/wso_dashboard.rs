@@ -1,15 +1,13 @@
 use std::collections::{HashMap, HashSet};
 
 use super::{
-    DataMetric, EmptyTableRow, SelectOptions, TableSkeleton,
     analytics::percentage,
-    filter_options, load_meet_data,
+    filters::filter_options,
+    loading::{load_error, load_meet_data},
     models::{Athlete, LiftingResult, Meet, normalize},
+    ui::{DataMetric, DataPage, DataStatus, DataTable, EmptyTableRow, FilterSelect, TableSkeleton},
 };
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::get_api_response,
-};
+use crate::utils::api::get_api_response;
 use leptos::prelude::*;
 
 #[component]
@@ -24,11 +22,39 @@ pub fn WsoDashboard() -> impl IntoView {
         LocalResource::new(move || load_meet_data::<Athlete>(meet.get(), "/meets/athletes"));
     let results =
         LocalResource::new(move || load_meet_data::<LiftingResult>(meet.get(), "/lifting-results"));
-    view! { <Header /><section class="data-page"><p class="data-eyebrow">"Competition data"</p><h1>"WSO meet dashboard"</h1><p class="data-intro">"See participation, make rates, lifted volume, and athlete totals for one WSO at a meet."</p>
-        {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) { (Some(Ok(upcoming)), Some(Ok(completed))) => { let mut meets = upcoming.iter().chain(completed.iter()).map(|row| row.name.clone()).collect::<Vec<_>>(); meets.sort(); meets.dedup(); view! { <div class="data-filters"><label>"Meet"<select class="data-filter data-filter-wide" on:change=move |event| { set_meet.set(event_target_value(&event)); set_wso.set(String::new()); }><option value="">"Choose a meet"</option><SelectOptions values=meets selected=Some(meet.get()) /></select></label>
-            {move || wsos.with(|response| match response { Some(Ok(rows)) if !meet.get().is_empty() => { let options = filter_options(rows.iter().map(String::as_str)); view! { <label>"WSO"<select class="data-filter data-filter-wide" on:change=move |event| set_wso.set(event_target_value(&event))><option value="">"Choose a WSO"</option><SelectOptions values=options selected=Some(wso.get()) /></select></label> }.into_any() }, Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load WSOs: {error}")}</p> }.into_any(), _ => ().into_any() })}</div> }.into_any() }, (Some(Err(error)), _) | (_, Some(Err(error))) => view! { <p class="data-status error">{format!("Could not load meets: {error}")}</p> }.into_any(), _ => view! { <p class="data-status">"Loading meets…"</p> }.into_any() }))}
-        {move || if wso.get().is_empty() { view! { <p class="data-status">"Choose a meet and WSO to view its dashboard."</p> }.into_any() } else { athletes.with(|athlete_response| results.with(|result_response| match (athlete_response, result_response) { (Some(Ok(athletes)), Some(Ok(results))) => dashboard(athletes, results, &wso.get()), (Some(Err(error)), _) | (_, Some(Err(error))) => view! { <p class="data-status error">{format!("Could not load WSO dashboard: {error}")}</p> }.into_any(), _ => view! { <TableSkeleton columns=8 /> }.into_any() })) }}
-    </section><Footer /> }
+    view! { <DataPage heading="WSO meet dashboard" intro="See participation, make rates, lifted volume, and athlete totals for one WSO at a meet.">
+        {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) {
+            (Some(Ok(upcoming)), Some(Ok(completed))) => {
+                let mut meets = upcoming.iter().chain(completed.iter()).map(|row| row.name.clone()).collect::<Vec<_>>();
+                meets.sort();
+                meets.dedup();
+                view! { <div class="data-filters">
+                    <FilterSelect
+                        label="Meet"
+                        placeholder="Choose a meet"
+                        values=meets
+                        selected=meet.get()
+                        wide=true
+                        on_select=move |value: String| {
+                            set_meet.set(value);
+                            set_wso.set(String::new());
+                        }
+                    />
+                    {move || wsos.with(|response| match response {
+                        Some(Ok(rows)) if !meet.get().is_empty() => {
+                            let options = filter_options(rows.iter().map(String::as_str));
+                            view! { <FilterSelect label="WSO" placeholder="Choose a WSO" values=options selected=wso.get() wide=true on_select=move |value| set_wso.set(value) /> }.into_any()
+                        }
+                        Some(Err(error)) => load_error("WSOs", error),
+                        _ => ().into_any(),
+                    })}
+                </div> }.into_any()
+            }
+            (Some(Err(error)), _) | (_, Some(Err(error))) => load_error("meets", error),
+            _ => view! { <DataStatus message="Loading meets…" /> }.into_any(),
+        }))}
+        {move || if wso.get().is_empty() { view! { <DataStatus message="Choose a meet and WSO to view its dashboard." /> }.into_any() } else { athletes.with(|athlete_response| results.with(|result_response| match (athlete_response, result_response) { (Some(Ok(athletes)), Some(Ok(results))) => dashboard(athletes, results, &wso.get()), (Some(Err(error)), _) | (_, Some(Err(error))) => load_error("WSO dashboard", error), _ => view! { <TableSkeleton columns=8 /> }.into_any() })) }}
+    </DataPage> }
 }
 
 fn dashboard(athletes: &[Athlete], results: &[LiftingResult], selected_wso: &str) -> AnyView {
@@ -40,7 +66,7 @@ fn dashboard(athletes: &[Athlete], results: &[LiftingResult], selected_wso: &str
     } = build_dashboard_data(athletes, results, selected_wso);
     let rows = rows.into_iter().map(|row| view! { <tr><td>{row.name}</td><td>{row.gender}</td><td>{row.weight_class}</td><td>{row.club}</td><td>{row.entry_total}</td><td>{row.snatch_best}</td><td>{row.cj_best}</td><td>{row.total}</td></tr> }).collect_view();
     view! { <div class="data-metric-grid"><DataMetric label="Meet athletes" value=meet_athletes.to_string() /><DataMetric label="WSO athletes" value=wso_athletes.to_string() /><DataMetric label="Snatch makes" value=format!("{:.1}%", percentage(attempts.snatch_makes, attempts.snatch_attempts)) /><DataMetric label="C&J makes" value=format!("{:.1}%", percentage(attempts.cj_makes, attempts.cj_attempts)) /><DataMetric label="Combined makes" value=format!("{:.1}%", percentage(attempts.makes(), attempts.attempts())) /><DataMetric label="Weight lifted" value=format!("{}kg", attempts.volume) /></div>
-    <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Gender"</th><th>"Class"</th><th>"Club"</th><th>"Entry total"</th><th>"Snatch"</th><th>"C&J"</th><th>"Total"</th></tr></thead><tbody>{(wso_athletes == 0).then(|| view! { <EmptyTableRow columns=8 message="No athletes from this WSO were found at the meet." /> })}{rows}</tbody></table></div> }.into_any()
+    <DataTable><thead><tr><th>"Athlete"</th><th>"Gender"</th><th>"Class"</th><th>"Club"</th><th>"Entry total"</th><th>"Snatch"</th><th>"C&J"</th><th>"Total"</th></tr></thead><tbody>{(wso_athletes == 0).then(|| view! { <EmptyTableRow columns=8 message="No athletes from this WSO were found at the meet." /> })}{rows}</tbody></DataTable> }.into_any()
 }
 
 struct WsoAthleteRow {

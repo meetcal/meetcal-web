@@ -1,8 +1,9 @@
-use super::{DataTable, EmptyTableRow, SelectOptions, SortDirection, TableSkeleton, sort_numeric};
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::get_api_response_with_query,
+use super::{
+    filters::{SortDirection, sort_numeric},
+    loading::load_error,
+    ui::{DataPage, DataStatus, DataTable, EmptyTableRow, SelectOptions, TableSkeleton},
 };
+use crate::utils::api::get_api_response_with_query;
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -132,29 +133,22 @@ pub fn NationalRankings() -> impl IntoView {
     });
 
     view! {
-        <Header />
-        <section class="data-page">
-            <p class="data-eyebrow">"Competition data"</p>
-            <h1>"National rankings"</h1>
-            <p class="data-intro">
-                "Find each athlete’s best total for a USAW or USAMW division. Add a year to limit the rankings to that season."
-            </p>
-
+        <DataPage
+            heading="National rankings"
+            intro="Find each athlete’s best total for a USAW or USAMW division. Add a year to limit the rankings to that season."
+        >
             <NationalRankingsForm federation set_federation gender set_gender age_group set_age_group division set_division year set_year set_request />
             <p class="data-help">"Division choices match the gender, age group, and weight classes used in the MeetCal app."</p>
 
             {move || rankings.with(|response| match response {
                 None => view! { <TableSkeleton columns=4 /> }.into_any(),
-                Some(Err(error)) => view! {
-                    <p class="data-status error">{format!("Could not load national rankings: {error}")}</p>
-                }.into_any(),
+                Some(Err(error)) => load_error("national rankings", error),
                 Some(Ok(_)) if request.get().is_none() => view! {
-                    <p class="data-status">"Enter a division to view its national rankings."</p>
+                    <DataStatus message="Enter a division to view its national rankings." />
                 }.into_any(),
                 Some(Ok(rankings)) => view! { <NationalRankingsTable rankings=rankings.clone() /> }.into_any(),
             })}
-        </section>
-        <Footer />
+        </DataPage>
     }
 }
 

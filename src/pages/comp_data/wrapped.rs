@@ -1,13 +1,10 @@
 use super::{
-    DataMetric, TableSkeleton,
     analytics::{WrappedStats, wrapped_stats},
     athlete_autocomplete::AthleteAutocomplete,
     models::{AthleteSearchQuery, AthleteSearchResponse},
+    ui::{DataMetric, DataPage, DataStatus, TableSkeleton},
 };
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::get_api_response_with_query,
-};
+use crate::utils::api::get_api_response_with_query;
 use js_sys::Date;
 use leptos::prelude::*;
 #[derive(Clone)]
@@ -35,14 +32,14 @@ pub fn Wrapped() -> impl IntoView {
             }
         }
     });
-    view! { <Header /><section class="data-page"><p class="data-eyebrow">"Competition data"</p><h1>"Athlete wrapped"</h1><p class="data-intro">"Summarize an athlete’s competition year, best lifts, make rate, and progress."</p>
+    view! { <DataPage heading="Athlete wrapped" intro="Summarize an athlete’s competition year, best lifts, make rate, and progress.">
         <form class="data-query-form" on:submit=move |event| { event.prevent_default(); let athlete = athlete_name.get().trim().to_owned(); if athlete.is_empty() { return; } let selected_year = year.get().parse().unwrap_or(current_year); set_request.set(Some(WrappedRequest { athlete, year: selected_year })); }>
             <AthleteAutocomplete value=athlete_name set_value=set_athlete_name input_id="wrapped-athlete" wrapper_class="data-query-grow" />
             <label>"Year"<input class="data-filter data-year-input" inputmode="numeric" maxlength="4" prop:value=current_year on:input=move |event| set_year.set(event_target_value(&event)) /></label>
             <button class="data-search-button" type="submit">"Build wrapped"</button>
         </form>
-        {move || wrapped.with(|response| match response { None if request.get().is_some() => view! { <TableSkeleton columns=3 /> }.into_any(), Some(Err(error)) => view! { <p class="data-status error">{format!("Could not build wrapped: {error}")}</p> }.into_any(), Some(Ok(Some(response))) => report(response, request.get().map(|request| request.year).unwrap_or(current_year)), _ => view! { <p class="data-status">"Enter an athlete to build their yearly recap."</p> }.into_any() })}
-    </section><Footer /> }
+        {move || wrapped.with(|response| match response { None if request.get().is_some() => view! { <TableSkeleton columns=3 /> }.into_any(), Some(Err(error)) => view! { <p class="data-status error">{format!("Could not build wrapped: {error}")}</p> }.into_any(), Some(Ok(Some(response))) => report(response, request.get().map(|request| request.year).unwrap_or(current_year)), _ => view! { <DataStatus message="Enter an athlete to build their yearly recap." /> }.into_any() })}
+    </DataPage> }
 }
 
 async fn athlete(name: &str, year: i32) -> Result<(String, WrappedStats), String> {

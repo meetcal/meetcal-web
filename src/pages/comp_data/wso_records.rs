@@ -1,11 +1,9 @@
 use super::{
-    EmptyTableRow, SelectOptions, TableSkeleton, compare_weight_classes, filter_options,
-    matches_filter, weight_class_options,
+    filters::{compare_weight_classes, filter_options, matches_filter, weight_class_options},
+    loading::{select_response, table_response},
+    ui::{DataPage, DataStatus, DataTable, EmptyTableRow, FilterSelect, SortSelect},
 };
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::{get_api_response, get_api_response_with_query},
-};
+use crate::utils::api::{get_api_response, get_api_response_with_query};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -29,6 +27,13 @@ fn lift_value(value: Option<f64>) -> String {
         .map(|value| value.to_string())
         .unwrap_or_else(|| "—".to_owned())
 }
+
+const SORT_OPTIONS: &[(&str, &str)] = &[
+    ("total_desc", "Total: high to low"),
+    ("snatch_desc", "Snatch: high to low"),
+    ("cj_desc", "Clean & jerk: high to low"),
+    ("weight_asc", "Weight class"),
+];
 
 #[component]
 pub fn WsoRecords() -> impl IntoView {
@@ -56,89 +61,72 @@ pub fn WsoRecords() -> impl IntoView {
     });
 
     view! {
-        <Header />
-        <section class="data-page">
-            <p class="data-eyebrow">"Competition data"</p>
-            <h1>"WSO records"</h1>
-            <p class="data-intro">
-                "Browse records published by USA Weightlifting state organizations."
-            </p>
-
-            {move || organizations.with(|response| match response {
-                None => view! { <p class="data-status">"Loading organizations…"</p> }.into_any(),
-                Some(Err(error)) => view! {
-                    <p class="data-status error">{format!("Could not load WSOs: {error}")}</p>
-                }.into_any(),
-                Some(Ok(organizations)) => view! {
-                    <div class="data-filters">
-                        <label>
-                            "Organization"
-                            <select class="data-filter" on:change=move |event| {
-                                set_wso.set(event_target_value(&event));
-                                set_gender.set(String::new());
-                                set_age.set(String::new());
-                                set_weight_class.set(String::new());
-                            }>
-                                <option value="">"Choose a WSO"</option>
-                                <SelectOptions values=organizations.clone() selected=Some(wso.get()) />
-                            </select>
-                        </label>
-                    </div>
-                }.into_any()
-            })}
+        <DataPage
+            heading="WSO records"
+            intro="Browse records published by USA Weightlifting state organizations."
+        >
+            {move || organizations.with(|response| select_response(response, "Loading organizations…", "WSOs", |organizations| view! {
+                <div class="data-filters">
+                    <FilterSelect
+                        label="Organization"
+                        placeholder="Choose a WSO"
+                        values=organizations.to_vec()
+                        selected=wso.get()
+                        on_select=move |value: String| {
+                            set_wso.set(value);
+                            set_gender.set(String::new());
+                            set_age.set(String::new());
+                            set_weight_class.set(String::new());
+                        }
+                    />
+                </div>
+            }.into_any()))}
 
             {move || if wso.get().is_empty() {
-                view! { <p class="data-status">"Choose an organization to view its records."</p> }.into_any()
+                view! { <DataStatus message="Choose an organization to view its records." /> }.into_any()
             } else {
-                records.with(|response| match response {
-                    None => view! { <TableSkeleton columns=6 /> }.into_any(),
-                    Some(Err(error)) => view! {
-                        <p class="data-status error">{format!("Could not load WSO records: {error}")}</p>
-                    }.into_any(),
-                    Some(Ok(records)) => {
-                        let genders = filter_options(records.iter().map(|row| row.gender.as_str()));
-                        let ages = filter_options(records.iter().map(|row| row.age_category.as_str()));
-                        let weights = weight_class_options(records.iter().map(|row| row.weight_class.as_str()));
-                        let selected_gender = gender.get();
-                        let selected_age = age.get();
-                        let selected_weight = weight_class.get();
-                        let mut filtered = records.iter().filter(|row| {
-                            matches_filter(&row.gender, &selected_gender)
-                                && matches_filter(&row.age_category, &selected_age)
-                                && matches_filter(&row.weight_class, &selected_weight)
-                        }).collect::<Vec<_>>();
-                        match sort.get().as_str() {
-                            "snatch_desc" => filtered.sort_by(|left, right| right.snatch_record.unwrap_or_default().total_cmp(&left.snatch_record.unwrap_or_default())),
-                            "cj_desc" => filtered.sort_by(|left, right| right.cj_record.unwrap_or_default().total_cmp(&left.cj_record.unwrap_or_default())),
-                            "weight_asc" => filtered.sort_by(|left, right| compare_weight_classes(&left.weight_class, &right.weight_class)),
-                            _ => filtered.sort_by(|left, right| right.total_record.unwrap_or_default().total_cmp(&left.total_record.unwrap_or_default())),
-                        }
-                        let is_empty = filtered.is_empty();
-                        let rows = filtered.into_iter().map(|row| view! {
-                            <tr>
-                                <td>{row.gender.clone()}</td><td>{row.age_category.clone()}</td>
-                                <td>{row.weight_class.clone()}</td><td>{lift_value(row.snatch_record)}</td>
-                                <td>{lift_value(row.cj_record)}</td><td>{lift_value(row.total_record)}</td>
-                            </tr>
-                        }).collect_view();
-
-                        view! {
-                            <div class="data-filters data-filters-secondary">
-                                <label>"Gender"<select class="data-filter" on:change=move |event| set_gender.set(event_target_value(&event))><option value="">"All genders"</option><SelectOptions values=genders selected=Some(selected_gender) /></select></label>
-                                <label>"Age"<select class="data-filter" on:change=move |event| set_age.set(event_target_value(&event))><option value="">"All ages"</option><SelectOptions values=ages selected=Some(selected_age) /></select></label>
-                                <label>"Weight class"<select class="data-filter" on:change=move |event| set_weight_class.set(event_target_value(&event))><option value="">"All classes"</option><SelectOptions values=weights selected=Some(selected_weight) /></select></label>
-                                <label class="data-sort">"Sort"<select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))><option value="total_desc">"Total: high to low"</option><option value="snatch_desc">"Snatch: high to low"</option><option value="cj_desc">"Clean & jerk: high to low"</option><option value="weight_asc">"Weight class"</option></select></label>
-                            </div>
-                            <div class="data-table-wrap"><table class="data-table">
-                                <thead><tr><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Snatch"</th><th>"Clean & jerk"</th><th>"Total"</th></tr></thead>
-                                <tbody>{is_empty.then(|| view! { <EmptyTableRow columns=6 message="No WSO records match these filters." /> })}{rows}</tbody>
-                            </table></div>
-                        }.into_any()
+                records.with(|response| table_response(response, 6, "WSO records", |records| {
+                    let genders = filter_options(records.iter().map(|row| row.gender.as_str()));
+                    let ages = filter_options(records.iter().map(|row| row.age_category.as_str()));
+                    let weights = weight_class_options(records.iter().map(|row| row.weight_class.as_str()));
+                    let selected_gender = gender.get();
+                    let selected_age = age.get();
+                    let selected_weight = weight_class.get();
+                    let mut filtered = records.iter().filter(|row| {
+                        matches_filter(&row.gender, &selected_gender)
+                            && matches_filter(&row.age_category, &selected_age)
+                            && matches_filter(&row.weight_class, &selected_weight)
+                    }).collect::<Vec<_>>();
+                    match sort.get().as_str() {
+                        "snatch_desc" => filtered.sort_by(|left, right| right.snatch_record.unwrap_or_default().total_cmp(&left.snatch_record.unwrap_or_default())),
+                        "cj_desc" => filtered.sort_by(|left, right| right.cj_record.unwrap_or_default().total_cmp(&left.cj_record.unwrap_or_default())),
+                        "weight_asc" => filtered.sort_by(|left, right| compare_weight_classes(&left.weight_class, &right.weight_class)),
+                        _ => filtered.sort_by(|left, right| right.total_record.unwrap_or_default().total_cmp(&left.total_record.unwrap_or_default())),
                     }
-                })
+                    let is_empty = filtered.is_empty();
+                    let rows = filtered.into_iter().map(|row| view! {
+                        <tr>
+                            <td>{row.gender.clone()}</td><td>{row.age_category.clone()}</td>
+                            <td>{row.weight_class.clone()}</td><td>{lift_value(row.snatch_record)}</td>
+                            <td>{lift_value(row.cj_record)}</td><td>{lift_value(row.total_record)}</td>
+                        </tr>
+                    }).collect_view();
+
+                    view! {
+                        <div class="data-filters data-filters-secondary">
+                            <FilterSelect label="Gender" placeholder="All genders" values=genders selected=selected_gender on_select=move |value| set_gender.set(value) />
+                            <FilterSelect label="Age" placeholder="All ages" values=ages selected=selected_age on_select=move |value| set_age.set(value) />
+                            <FilterSelect label="Weight class" placeholder="All classes" values=weights selected=selected_weight on_select=move |value| set_weight_class.set(value) />
+                            <SortSelect options=SORT_OPTIONS set_sort />
+                        </div>
+                        <DataTable>
+                            <thead><tr><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Snatch"</th><th>"Clean & jerk"</th><th>"Total"</th></tr></thead>
+                            <tbody>{is_empty.then(|| view! { <EmptyTableRow columns=6 message="No WSO records match these filters." /> })}{rows}</tbody>
+                        </DataTable>
+                    }.into_any()
+                }))
             }}
-        </section>
-        <Footer />
+        </DataPage>
     }
 }
 

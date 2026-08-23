@@ -1,15 +1,12 @@
 use super::{
-    SortDirection, TableSkeleton,
     athlete_autocomplete::AthleteAutocomplete,
-    format_us_date,
-    models::attempt,
-    models::{AthleteSearchQuery, AthleteSearchResponse},
-    sort_numeric, sort_text, yes_no,
+    filters::{SortDirection, sort_numeric, sort_text},
+    format::{format_us_date, yes_no},
+    loading::load_error,
+    models::{AthleteSearchQuery, AthleteSearchResponse, attempt},
+    ui::{DataPage, DataStatus, DataTable, SortSelect, TableSkeleton},
 };
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::get_api_response_with_query,
-};
+use crate::utils::api::get_api_response_with_query;
 use js_sys::Date;
 use leptos::prelude::*;
 use leptos_router::hooks::use_query_map;
@@ -32,6 +29,13 @@ fn format_date(date: &Date) -> String {
         date.get_date(),
     )
 }
+
+const SORT_OPTIONS: &[(&str, &str)] = &[
+    ("date_desc", "Date: newest first"),
+    ("date_asc", "Date: oldest first"),
+    ("total_desc", "Total: high to low"),
+    ("total_asc", "Total: low to high"),
+];
 
 #[component]
 pub fn Results() -> impl IntoView {
@@ -65,28 +69,19 @@ pub fn Results() -> impl IntoView {
     });
 
     view! {
-        <Header />
-        <section class="data-page">
-            <p class="data-eyebrow">"Competition data"</p>
-            <h1>"Results"</h1>
-            <p class="data-intro">"Search an athlete’s competition history."</p>
-
+        <DataPage heading="Results" intro="Search an athlete’s competition history.">
             <ResultsSearchForm name set_name set_request />
 
             {move || results.with(|response| match response {
                 None => view! { <TableSkeleton columns=14 /> }.into_any(),
-                Some(Err(error)) => view! {
-                    <p class="data-status error">{format!("Could not load results: {error}")}</p>
-                }
-                .into_any(),
+                Some(Err(error)) => load_error("results", error),
                 Some(Ok(_)) if request.get().is_none() => view! {
-                    <p class="data-status">"Enter an athlete name to search."</p>
+                    <DataStatus message="Enter an athlete name to search." />
                 }
                 .into_any(),
                 Some(Ok(response)) => view! { <ResultsTable response=response.clone() sort set_sort /> }.into_any(),
             })}
-        </section>
-        <Footer />
+        </DataPage>
     }
 }
 
@@ -129,17 +124,9 @@ fn ResultsTable(
         {heading}
         {suggestions}
         <div class="data-filters">
-            <label class="data-sort">
-                "Sort"
-                <select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))>
-                    <option value="date_desc">"Date: newest first"</option>
-                    <option value="date_asc">"Date: oldest first"</option>
-                    <option value="total_desc">"Total: high to low"</option>
-                    <option value="total_asc">"Total: low to high"</option>
-                </select>
-            </label>
+            <SortSelect options=SORT_OPTIONS set_sort />
         </div>
-        <div class="data-table-wrap"><table class="data-table">
+        <DataTable>
             <thead><tr><th>"Date"</th><th>"Meet"</th><th>"Division"</th><th>"Bodyweight"</th><th>"S1"</th><th>"S2"</th><th>"S3"</th><th>"Best snatch"</th><th>"C&J 1"</th><th>"C&J 2"</th><th>"C&J 3"</th><th>"Best C&J"</th><th>"Total"</th><th>"Adaptive"</th></tr></thead>
             <tbody>{move || results.with_value(|results| {
                 let mut rows = results.iter().collect::<Vec<_>>();
@@ -151,7 +138,7 @@ fn ResultsTable(
                 }
                 rows.into_iter().map(|row| view! { <tr><td>{format_us_date(&row.date)}</td><td>{row.meet.clone()}</td><td>{row.age.clone()}</td><td>{row.body_weight}</td><td>{attempt(row.snatch1)}</td><td>{attempt(row.snatch2)}</td><td>{attempt(row.snatch3)}</td><td>{row.snatch_best}</td><td>{attempt(row.cj1)}</td><td>{attempt(row.cj2)}</td><td>{attempt(row.cj3)}</td><td>{row.cj_best}</td><td>{row.total}</td><td>{yes_no(row.adaptive)}</td></tr> }).collect_view()
             })}</tbody>
-        </table></div>
+        </DataTable>
     }
 }
 

@@ -1,8 +1,10 @@
-use super::{DataMetric, EmptyTableRow, SelectOptions, TableSkeleton, filter_options, yes_no};
-use crate::{
-    components::{footer::Footer, header::Header},
-    utils::api::{get_api_response, get_api_response_with_query},
+use super::{
+    filters::filter_options,
+    format::yes_no,
+    loading::{load_error, select_response},
+    ui::{DataMetric, DataPage, DataStatus, DataTable, EmptyTableRow, FilterSelect, TableSkeleton},
 };
+use crate::utils::api::{get_api_response, get_api_response_with_query};
 use leptos::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -83,40 +85,40 @@ pub fn ClubDashboard() -> impl IntoView {
         }
     });
     view! {
-        <Header />
-        <section class="data-page">
-            <p class="data-eyebrow">"Competition data"</p>
-            <h1>"Club meet dashboard"</h1>
-            <p class="data-intro">"Review a club’s athletes, medals, PRs, make rates, and meet totals."</p>
-            {move || clubs.with(|response| match response {
-                None => view! { <p class="data-status">"Loading clubs…"</p> }.into_any(),
-                Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load clubs: {error}")}</p> }.into_any(),
-                Some(Ok(clubs)) => view! {
-                    <div class="data-filters">
-                        <label>"Club"<select class="data-filter data-filter-wide" on:change=move |event| { set_club.set(event_target_value(&event)); set_meet.set(String::new()); }>
-                            <option value="">"Choose a club"</option><SelectOptions values=clubs.clone() selected=Some(club.get()) />
-                        </select></label>
-                        {move || athletes.with(|response| match response {
-                            Some(Ok(rows)) if !club.get().is_empty() => {
-                                let meets = filter_options(rows.iter().map(|row| row.meet.as_str()));
-                                view! { <label>"Meet"<select class="data-filter data-filter-wide" on:change=move |event| set_meet.set(event_target_value(&event))>
-                                    <option value="">"Choose a completed meet"</option><SelectOptions values=meets selected=Some(meet.get()) />
-                                </select></label> }.into_any()
-                            }
-                            Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load club meets: {error}")}</p> }.into_any(),
-                            _ => ().into_any(),
-                        })}
-                    </div>
-                }.into_any(),
-            })}
+        <DataPage
+            heading="Club meet dashboard"
+            intro="Review a club’s athletes, medals, PRs, make rates, and meet totals."
+        >
+            {move || clubs.with(|response| select_response(response, "Loading clubs…", "clubs", |clubs| view! {
+                <div class="data-filters">
+                    <FilterSelect
+                        label="Club"
+                        placeholder="Choose a club"
+                        values=clubs.to_vec()
+                        selected=club.get()
+                        wide=true
+                        on_select=move |value: String| {
+                            set_club.set(value);
+                            set_meet.set(String::new());
+                        }
+                    />
+                    {move || athletes.with(|response| match response {
+                        Some(Ok(rows)) if !club.get().is_empty() => {
+                            let meets = filter_options(rows.iter().map(|row| row.meet.as_str()));
+                            view! { <FilterSelect label="Meet" placeholder="Choose a completed meet" values=meets selected=meet.get() wide=true on_select=move |value| set_meet.set(value) /> }.into_any()
+                        }
+                        Some(Err(error)) => load_error("club meets", error),
+                        _ => ().into_any(),
+                    })}
+                </div>
+            }.into_any()))}
             {move || stats.with(|response| match response {
                 None if !meet.get().is_empty() => view! { <TableSkeleton columns=10 /> }.into_any(),
-                Some(Err(error)) => view! { <p class="data-status error">{format!("Could not load club dashboard: {error}")}</p> }.into_any(),
+                Some(Err(error)) => load_error("club dashboard", error),
                 Some(Ok(Some(stats))) => dashboard(stats),
-                _ => view! { <p class="data-status">"Choose a club and completed meet to view its dashboard."</p> }.into_any(),
+                _ => view! { <DataStatus message="Choose a club and completed meet to view its dashboard." /> }.into_any(),
             })}
-        </section>
-        <Footer />
+        </DataPage>
     }
 }
 
@@ -153,9 +155,10 @@ fn dashboard(stats: &MeetStats) -> AnyView {
         .into_iter()
         .map(|(label, value)| view! { <DataMetric label value /> })
         .collect_view();
+    let is_empty = stats.athlete_results.is_empty();
     let rows = stats.athlete_results.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.weight_class.clone()}</td><td>{row.body_weight}</td><td>{row.snatch_best}</td><td>{medal(&row.snatch_medal)}</td><td>{row.cj_best}</td><td>{medal(&row.cj_medal)}</td><td>{row.total}</td><td>{medal(&row.total_medal)}</td><td>{yes_no(row.is_pr)}</td><td>{yes_no(row.perfect_lifts)}</td></tr> }).collect_view();
     view! { <div class="data-metric-grid">{metrics}</div>
-    <div class="data-table-wrap"><table class="data-table"><thead><tr><th>"Athlete"</th><th>"Class"</th><th>"Bodyweight"</th><th>"Snatch"</th><th>"Snatch medal"</th><th>"C&J"</th><th>"C&J medal"</th><th>"Total"</th><th>"Total medal"</th><th>"PR"</th><th>"6 for 6"</th></tr></thead><tbody>{stats.athlete_results.is_empty().then(|| view! { <EmptyTableRow columns=11 message="No club results were found for this meet." /> })}{rows}</tbody></table></div> }.into_any()
+    <DataTable><thead><tr><th>"Athlete"</th><th>"Class"</th><th>"Bodyweight"</th><th>"Snatch"</th><th>"Snatch medal"</th><th>"C&J"</th><th>"C&J medal"</th><th>"Total"</th><th>"Total medal"</th><th>"PR"</th><th>"6 for 6"</th></tr></thead><tbody>{is_empty.then(|| view! { <EmptyTableRow columns=11 message="No club results were found for this meet." /> })}{rows}</tbody></DataTable> }.into_any()
 }
 
 #[cfg(test)]

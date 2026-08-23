@@ -1,17 +1,15 @@
-use crate::components::{footer::Footer, header::Header};
+use super::ui::DataPage;
 use leptos::prelude::*;
 use leptos_router::components::A;
 
 #[component]
 pub fn CompData() -> impl IntoView {
     view! {
-        <Header />
-        <section class="data-page data-home">
-            <p class="data-eyebrow">"Competition data"</p>
-            <h1>"Find the numbers you need"</h1>
-            <p class="data-intro">
-                "Browse meets, team performance, athlete history, qualification data, rankings, and records."
-            </p>
+        <DataPage
+            heading="Find the numbers you need"
+            intro="Browse meets, team performance, athlete history, qualification data, rankings, and records."
+            section_class="data-page data-home"
+        >
             <div class="data-card-grid">
                 <A href="/qualifying-totals" attr:class="data-card">
                     <h2>"Qualifying Totals"</h2>
@@ -62,7 +60,6 @@ pub fn CompData() -> impl IntoView {
                     <p>"Top adaptive performances by gender and weight class."</p>
                 </A>
             </div>
-        </section>
-        <Footer />
+        </DataPage>
     }
 }
