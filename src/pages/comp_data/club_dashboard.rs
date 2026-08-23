@@ -124,7 +124,16 @@ fn metric(label: &'static str, value: String) -> impl IntoView {
     view! { <div class="data-metric"><span>{label}</span><strong>{value}</strong></div> }
 }
 fn medal(value: &Option<String>) -> String {
-    value.clone().unwrap_or_else(|| "—".to_owned())
+    value
+        .as_deref()
+        .map(|value| {
+            let mut characters = value.chars();
+            characters
+                .next()
+                .map(|first| first.to_uppercase().collect::<String>() + characters.as_str())
+                .unwrap_or_default()
+        })
+        .unwrap_or_else(|| "—".to_owned())
 }
 fn dashboard(stats: &MeetStats) -> AnyView {
     let rows = stats.athlete_results.iter().map(|row| view! { <tr><td>{row.name.clone()}</td><td>{row.weight_class.clone()}</td><td>{row.body_weight}</td><td>{row.snatch_best}</td><td>{medal(&row.snatch_medal)}</td><td>{row.cj_best}</td><td>{medal(&row.cj_medal)}</td><td>{row.total}</td><td>{medal(&row.total_medal)}</td><td>{yes_no(row.is_pr)}</td><td>{yes_no(row.perfect_lifts)}</td></tr> }).collect_view();
@@ -139,5 +148,13 @@ mod tests {
     fn stats_payload_deserializes() {
         let stats: MeetStats = serde_json::from_str(r#"{"total_athletes":1,"gold_medals":1,"silver_medals":0,"bronze_medals":0,"total_prs":1,"perfect_6_for_6":1,"total_weight_lifted":225.0,"snatch_make_rate":100,"cj_make_rate":100,"combined_make_rate":100,"athlete_results":[]}"#).unwrap();
         assert_eq!(stats.total_athletes, 1);
+    }
+
+    #[test]
+    fn medals_are_title_case() {
+        assert_eq!(medal(&Some("gold".to_owned())), "Gold");
+        assert_eq!(medal(&Some("silver".to_owned())), "Silver");
+        assert_eq!(medal(&Some("bronze".to_owned())), "Bronze");
+        assert_eq!(medal(&None), "—");
     }
 }

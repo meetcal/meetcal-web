@@ -339,6 +339,8 @@ test("club and WSO dashboards expose meet performance metrics", async ({ page })
   await page.getByRole("combobox", { name: "Meet" }).selectOption("Test Meet");
   await expect(page.getByText("Gold medals")).toBeVisible();
   await expect(page.locator("tbody")).toContainText("Test Athlete");
+  await expect(page.locator("tbody")).toContainText("Gold");
+  await expect(page.locator("tbody")).not.toContainText("gold");
 
   await page.route("**/meets", (route) => route.fulfill(jsonResponse([])));
   await page.route("**/meets/completed", (route) => route.fulfill(jsonResponse([completedMeet])));
