@@ -29,9 +29,21 @@ pub fn CompData() -> impl IntoView {
                     <h2>"Rankings"</h2>
                     <p>"International rankings, totals, and percentage scores."</p>
                 </A>
+                <A href="/national-rankings" attr:class="data-card">
+                    <h2>"National Rankings"</h2>
+                    <p>"USAW and USAMW rankings by division, with optional year filtering."</p>
+                </A>
                 <A href="/records" attr:class="data-card">
                     <h2>"Records"</h2>
                     <p>"Snatch, clean and jerk, and total records."</p>
+                </A>
+                <A href="/wso-records" attr:class="data-card">
+                    <h2>"WSO Records"</h2>
+                    <p>"State-organization records by division and weight class."</p>
+                </A>
+                <A href="/adaptive-records" attr:class="data-card">
+                    <h2>"Adaptive Records"</h2>
+                    <p>"Top adaptive performances by gender and weight class."</p>
                 </A>
             </div>
         </section>

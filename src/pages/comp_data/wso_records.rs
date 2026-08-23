@@ -1,0 +1,174 @@
+use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
+use crate::{
+    components::{footer::Footer, header::Header},
+    utils::api::{get_api_response, get_api_response_with_query},
+};
+use leptos::prelude::*;
+use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Serialize)]
+struct WsoRecordsQuery {
+    wso: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct WsoRecord {
+    age_category: String,
+    cj_record: Option<f64>,
+    gender: String,
+    snatch_record: Option<f64>,
+    total_record: Option<f64>,
+    weight_class: String,
+    wso: String,
+}
+
+fn lift_value(value: Option<f64>) -> String {
+    value
+        .map(|value| value.to_string())
+        .unwrap_or_else(|| "—".to_owned())
+}
+
+#[component]
+pub fn WsoRecords() -> impl IntoView {
+    let (wso, set_wso) = signal(String::new());
+    let (gender, set_gender) = signal(String::new());
+    let (age, set_age) = signal(String::new());
+    let (weight_class, set_weight_class) = signal(String::new());
+    let (sort, set_sort) = signal("total_desc".to_owned());
+
+    let organizations =
+        LocalResource::new(|| async { get_api_response::<String>("/data/wso").await });
+    let records = LocalResource::new(move || {
+        let selected_wso = wso.get();
+        async move {
+            if selected_wso.is_empty() {
+                Ok(Vec::new())
+            } else {
+                get_api_response_with_query::<Vec<WsoRecord>, _>(
+                    "/data/wso/records",
+                    &WsoRecordsQuery { wso: selected_wso },
+                )
+                .await
+            }
+        }
+    });
+
+    view! {
+        <Header />
+        <section class="data-page">
+            <p class="data-eyebrow">"Competition data"</p>
+            <h1>"WSO records"</h1>
+            <p class="data-intro">
+                "Browse records published by USA Weightlifting state organizations."
+            </p>
+
+            {move || organizations.with(|response| match response {
+                None => view! { <p class="data-status">"Loading organizations…"</p> }.into_any(),
+                Some(Err(error)) => view! {
+                    <p class="data-status error">{format!("Could not load WSOs: {error}")}</p>
+                }.into_any(),
+                Some(Ok(organizations)) => view! {
+                    <div class="data-filters">
+                        <label>
+                            "Organization"
+                            <select class="data-filter" on:change=move |event| {
+                                set_wso.set(event_target_value(&event));
+                                set_gender.set(String::new());
+                                set_age.set(String::new());
+                                set_weight_class.set(String::new());
+                            }>
+                                <option value="">"Choose a WSO"</option>
+                                <SelectOptions values=organizations.clone() selected=Some(wso.get()) />
+                            </select>
+                        </label>
+                    </div>
+                }.into_any()
+            })}
+
+            {move || if wso.get().is_empty() {
+                view! { <p class="data-status">"Choose an organization to view its records."</p> }.into_any()
+            } else {
+                records.with(|response| match response {
+                    None => view! { <TableSkeleton columns=7 /> }.into_any(),
+                    Some(Err(error)) => view! {
+                        <p class="data-status error">{format!("Could not load WSO records: {error}")}</p>
+                    }.into_any(),
+                    Some(Ok(records)) => {
+                        let genders = filter_options(records.iter().map(|row| row.gender.as_str()));
+                        let ages = filter_options(records.iter().map(|row| row.age_category.as_str()));
+                        let weights = filter_options(records.iter().map(|row| row.weight_class.as_str()));
+                        let selected_gender = gender.get();
+                        let selected_age = age.get();
+                        let selected_weight = weight_class.get();
+                        let mut filtered = records.iter().filter(|row| {
+                            matches_filter(&row.gender, &selected_gender)
+                                && matches_filter(&row.age_category, &selected_age)
+                                && matches_filter(&row.weight_class, &selected_weight)
+                        }).collect::<Vec<_>>();
+                        match sort.get().as_str() {
+                            "snatch_desc" => filtered.sort_by(|left, right| right.snatch_record.unwrap_or_default().total_cmp(&left.snatch_record.unwrap_or_default())),
+                            "cj_desc" => filtered.sort_by(|left, right| right.cj_record.unwrap_or_default().total_cmp(&left.cj_record.unwrap_or_default())),
+                            "weight_asc" => filtered.sort_by(|left, right| left.weight_class.cmp(&right.weight_class)),
+                            _ => filtered.sort_by(|left, right| right.total_record.unwrap_or_default().total_cmp(&left.total_record.unwrap_or_default())),
+                        }
+                        let is_empty = filtered.is_empty();
+                        let rows = filtered.into_iter().map(|row| view! {
+                            <tr>
+                                <td>{row.wso.clone()}</td><td>{row.gender.clone()}</td><td>{row.age_category.clone()}</td>
+                                <td>{row.weight_class.clone()}</td><td>{lift_value(row.snatch_record)}</td>
+                                <td>{lift_value(row.cj_record)}</td><td>{lift_value(row.total_record)}</td>
+                            </tr>
+                        }).collect_view();
+
+                        view! {
+                            <div class="data-filters data-filters-secondary">
+                                <label>"Gender"<select class="data-filter" on:change=move |event| set_gender.set(event_target_value(&event))><option value="">"All genders"</option><SelectOptions values=genders selected=Some(selected_gender) /></select></label>
+                                <label>"Age"<select class="data-filter" on:change=move |event| set_age.set(event_target_value(&event))><option value="">"All ages"</option><SelectOptions values=ages selected=Some(selected_age) /></select></label>
+                                <label>"Weight class"<select class="data-filter" on:change=move |event| set_weight_class.set(event_target_value(&event))><option value="">"All classes"</option><SelectOptions values=weights selected=Some(selected_weight) /></select></label>
+                                <label class="data-sort">"Sort"<select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))><option value="total_desc">"Total: high to low"</option><option value="snatch_desc">"Snatch: high to low"</option><option value="cj_desc">"Clean & jerk: high to low"</option><option value="weight_asc">"Weight class"</option></select></label>
+                            </div>
+                            <div class="data-table-wrap"><table class="data-table">
+                                <thead><tr><th>"WSO"</th><th>"Gender"</th><th>"Age"</th><th>"Weight class"</th><th>"Snatch"</th><th>"Clean & jerk"</th><th>"Total"</th></tr></thead>
+                                <tbody>{is_empty.then(|| view! { <EmptyTableRow columns=7 message="No WSO records match these filters." /> })}{rows}</tbody>
+                            </table></div>
+                        }.into_any()
+                    }
+                })
+            }}
+        </section>
+        <Footer />
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_lifts_use_an_em_dash() {
+        assert_eq!(lift_value(None), "—");
+        assert_eq!(lift_value(Some(112.5)), "112.5");
+    }
+
+    #[test]
+    fn wso_query_percent_encodes_the_organization() {
+        let query = serde_urlencoded::to_string(WsoRecordsQuery {
+            wso: "Carolina WSO".to_owned(),
+        })
+        .unwrap();
+
+        assert_eq!(query, "wso=Carolina+WSO");
+    }
+
+    #[test]
+    fn wso_record_accepts_nullable_lifts() {
+        let record: WsoRecord = serde_json::from_str(
+            r#"{"age_category":"Senior","cj_record":null,"gender":"Women","snatch_record":80.0,"total_record":null,"weight_class":"58kg","wso":"Carolina"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(record.snatch_record, Some(80.0));
+        assert_eq!(record.cj_record, None);
+        assert_eq!(record.total_record, None);
+    }
+}

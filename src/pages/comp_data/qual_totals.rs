@@ -1,4 +1,4 @@
-use super::{SelectOptions, TableSkeleton, filter_options};
+use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response,
@@ -20,6 +20,7 @@ pub fn QualifyingTotals() -> impl IntoView {
     let (gender, set_gender) = signal(String::new());
     let (meet, set_meet) = signal(String::new());
     let (age, set_age) = signal(String::new());
+    let (weight_class, set_weight_class) = signal(String::new());
     let (sort, set_sort) = signal("total_asc".to_string());
 
     let totals = LocalResource::new(move || async move {
@@ -49,16 +50,19 @@ pub fn QualifyingTotals() -> impl IntoView {
                         let meets = filter_options(rows.iter().map(|row| row.event_name.as_str()));
                         let genders = filter_options(rows.iter().map(|row| row.gender.as_str()));
                         let ages = filter_options(rows.iter().map(|row| row.age_category.as_str()));
+                        let weights = filter_options(rows.iter().map(|row| row.weight_class.as_str()));
 
                         let selected_meet = meet.get();
                         let selected_gender = gender.get();
                         let selected_age = age.get();
+                        let selected_weight = weight_class.get();
                         let mut filtered_totals = rows
                             .iter()
                             .filter(|row| {
                                 (selected_meet.is_empty() || row.event_name == selected_meet)
-                                    && (selected_gender.is_empty() || row.gender == selected_gender)
-                                    && (selected_age.is_empty() || row.age_category == selected_age)
+                                    && matches_filter(&row.gender, &selected_gender)
+                                    && matches_filter(&row.age_category, &selected_age)
+                                    && matches_filter(&row.weight_class, &selected_weight)
                             })
                             .collect::<Vec<_>>();
 
@@ -76,6 +80,7 @@ pub fn QualifyingTotals() -> impl IntoView {
                                 left.qualifying_total.total_cmp(&right.qualifying_total)
                             }),
                         }
+                        let is_empty = filtered_totals.is_empty();
                         let rows = filtered_totals
                             .into_iter()
                             .map(|row| {
@@ -114,6 +119,13 @@ pub fn QualifyingTotals() -> impl IntoView {
                                         <SelectOptions values=ages selected=Some(selected_age.clone()) />
                                     </select>
                                 </label>
+                                <label>
+                                    "Weight class"
+                                    <select class="data-filter" on:change=move |event| set_weight_class.set(event_target_value(&event))>
+                                        <option value="">"All classes"</option>
+                                        <SelectOptions values=weights selected=Some(selected_weight.clone()) />
+                                    </select>
+                                </label>
                                 <label class="data-sort">
                                     "Sort"
                                     <select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))>
@@ -134,7 +146,10 @@ pub fn QualifyingTotals() -> impl IntoView {
                                         <th>"Total"</th>
                                     </tr>
                                 </thead>
-                                <tbody>{rows}</tbody>
+                                <tbody>
+                                    {is_empty.then(|| view! { <EmptyTableRow columns=5 message="No qualifying totals match these filters." /> })}
+                                    {rows}
+                                </tbody>
                             </DataTable>
                         }
                         .into_any()
@@ -144,6 +159,22 @@ pub fn QualifyingTotals() -> impl IntoView {
         </section>
 
         <Footer />
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn qualifying_total_deserializes_from_the_api_shape() {
+        let total: QualifyingTotal = serde_json::from_str(
+            r#"{"qualifying_total":215.5,"event_name":"Nationals","gender":"Women","age_category":"Senior","weight_class":"69kg"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(total.event_name, "Nationals");
+        assert_eq!(total.qualifying_total, 215.5);
     }
 }
 

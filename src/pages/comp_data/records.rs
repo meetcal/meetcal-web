@@ -1,4 +1,4 @@
-use super::{SelectOptions, TableSkeleton, filter_options};
+use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response,
@@ -22,6 +22,7 @@ pub fn Records() -> impl IntoView {
     let (record_type, set_record_type) = signal(String::new());
     let (gender, set_gender) = signal(String::new());
     let (age, set_age) = signal(String::new());
+    let (weight_class, set_weight_class) = signal(String::new());
     let (sort, set_sort) = signal("total_desc".to_string());
     let records =
         LocalResource::new(|| async { get_api_response::<Record>("/data/records").await });
@@ -50,15 +51,18 @@ pub fn Records() -> impl IntoView {
                     );
                     let genders = filter_options(records.iter().map(|record| record.gender.as_str()));
                     let ages = filter_options(records.iter().map(|record| record.age_category.as_str()));
+                    let weights = filter_options(records.iter().map(|record| record.weight_class.as_str()));
                     let selected_type = record_type.get();
                     let selected_gender = gender.get();
                     let selected_age = age.get();
+                    let selected_weight = weight_class.get();
                     let mut filtered_records = records
                         .iter()
                         .filter(|record| {
                             (selected_type.is_empty() || record.record_type == selected_type)
-                                && (selected_gender.is_empty() || record.gender == selected_gender)
-                                && (selected_age.is_empty() || record.age_category == selected_age)
+                                && matches_filter(&record.gender, &selected_gender)
+                                && matches_filter(&record.age_category, &selected_age)
+                                && matches_filter(&record.weight_class, &selected_weight)
                                 && record.record_type != "BWL"
                         })
                         .collect::<Vec<_>>();
@@ -83,6 +87,7 @@ pub fn Records() -> impl IntoView {
                             right.total_record.total_cmp(&left.total_record)
                         }),
                     }
+                    let is_empty = filtered_records.is_empty();
                     let rows = filtered_records
                         .into_iter()
                         .map(|record| view! {
@@ -121,6 +126,13 @@ pub fn Records() -> impl IntoView {
                                     <SelectOptions values=ages selected=Some(selected_age.clone()) />
                                 </select>
                             </label>
+                            <label>
+                                "Weight class"
+                                <select class="data-filter" on:change=move |event| set_weight_class.set(event_target_value(&event))>
+                                    <option value="">"All classes"</option>
+                                    <SelectOptions values=weights selected=Some(selected_weight.clone()) />
+                                </select>
+                            </label>
                             <label class="data-sort">
                                 "Sort"
                                 <select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))>
@@ -146,7 +158,10 @@ pub fn Records() -> impl IntoView {
                                         <th>"Total"</th>
                                     </tr>
                                 </thead>
-                                <tbody>{rows}</tbody>
+                                <tbody>
+                                    {is_empty.then(|| view! { <EmptyTableRow columns=7 message="No records match these filters." /> })}
+                                    {rows}
+                                </tbody>
                             </table>
                         </div>
                     }
@@ -155,5 +170,21 @@ pub fn Records() -> impl IntoView {
             })}
         </section>
         <Footer />
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn record_deserializes_from_the_api_shape() {
+        let record: Record = serde_json::from_str(
+            r#"{"age_category":"Senior","gender":"Women","weight_class":"77kg","record_type":"USAW","snatch_record":130.0,"cj_record":160.0,"total_record":287.0}"#,
+        )
+        .unwrap();
+
+        assert_eq!(record.record_type, "USAW");
+        assert_eq!(record.total_record, 287.0);
     }
 }

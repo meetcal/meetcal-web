@@ -2,6 +2,31 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=31536000; includeSubDomains"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'wasm-unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://*.clerk.accounts.dev https://*.protect.clerk.com https://challenges.cloudflare.com https://*.posthog.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://img.clerk.com https://*.clerk.com https://*.clerk.accounts.dev; font-src 'self' data:; connect-src 'self' https://api.meetcal.app https://*.clerk.accounts.dev https://*.clerk.com https://*.protect.clerk.com:* https://api.revenuecat.com https://e.revenue.cat https://*.posthog.com; frame-src https://challenges.cloudflare.com https://*.protect.clerk.com; worker-src 'self' blob:; manifest-src 'self'; upgrade-insecure-requests"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/api/:path*",
@@ -9,39 +34,55 @@
     },
     {
       "source": "/features",
-      "destination": "/index.html"
+      "destination": "/seo/features.html"
     },
     {
       "source": "/privacy",
-      "destination": "/index.html"
+      "destination": "/seo/privacy.html"
     },
     {
       "source": "/terms",
-      "destination": "/index.html"
+      "destination": "/seo/terms.html"
     },
     {
       "source": "/comp-data",
-      "destination": "/index.html"
+      "destination": "/seo/comp-data.html"
     },
     {
       "source": "/qualifying-totals",
-      "destination": "/index.html"
+      "destination": "/seo/qualifying-totals.html"
     },
     {
       "source": "/standards",
-      "destination": "/index.html"
+      "destination": "/seo/standards.html"
     },
     {
       "source": "/records",
-      "destination": "/index.html"
+      "destination": "/seo/records.html"
     },
     {
       "source": "/results",
-      "destination": "/index.html"
+      "destination": "/seo/results.html"
     },
     {
       "source": "/rankings",
-      "destination": "/index.html"
+      "destination": "/seo/rankings.html"
+    },
+    {
+      "source": "/national-rankings",
+      "destination": "/seo/national-rankings.html"
+    },
+    {
+      "source": "/wso-records",
+      "destination": "/seo/wso-records.html"
+    },
+    {
+      "source": "/adaptive-records",
+      "destination": "/seo/adaptive-records.html"
+    },
+    {
+      "source": "/subscription",
+      "destination": "/seo/subscription.html"
     }
   ]
 }

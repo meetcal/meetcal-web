@@ -3,8 +3,9 @@ use leptos_router::components::*;
 use leptos_router::path;
 use meetcal_web::pages::{
     comp_data::{
-        data_home::CompData, qual_totals::QualifyingTotals, rankings::Rankings, records::Records,
-        results::Results, standards::Standards,
+        adaptive_records::AdaptiveRecords, data_home::CompData,
+        national_rankings::NationalRankings, qual_totals::QualifyingTotals, rankings::Rankings,
+        records::Records, results::Results, standards::Standards, wso_records::WsoRecords,
     },
     features::FeaturesPage,
     home::Home,
@@ -12,7 +13,13 @@ use meetcal_web::pages::{
     privacy::PrivacyPage,
     terms::TermsPage,
 };
-use meetcal_web::{auth::provide_auth, components::subscription_gate::SubscriptionGate};
+use meetcal_web::{
+    auth::provide_auth,
+    components::{
+        seo::RouteMetadata,
+        subscription_gate::{MobileSubscriptionPage, SubscriptionGate},
+    },
+};
 
 fn main() {
     leptos::mount::mount_to_body(App)
@@ -24,6 +31,7 @@ fn App() -> impl IntoView {
 
     view! {
         <Router>
+            <RouteMetadata />
             <main>
                 <Routes fallback=|| view! { <NotFound /> }>
                     <Route path=path!("/") view=Home />
@@ -33,6 +41,10 @@ fn App() -> impl IntoView {
                     <Route path=path!("/records") view=|| view! { <SubscriptionGate><Records /></SubscriptionGate> } />
                     <Route path=path!("/results") view=|| view! { <SubscriptionGate><Results /></SubscriptionGate> } />
                     <Route path=path!("/rankings") view=|| view! { <SubscriptionGate><Rankings /></SubscriptionGate> } />
+                    <Route path=path!("/national-rankings") view=|| view! { <SubscriptionGate><NationalRankings /></SubscriptionGate> } />
+                    <Route path=path!("/wso-records") view=|| view! { <SubscriptionGate><WsoRecords /></SubscriptionGate> } />
+                    <Route path=path!("/adaptive-records") view=|| view! { <SubscriptionGate><AdaptiveRecords /></SubscriptionGate> } />
+                    <Route path=path!("/subscription") view=MobileSubscriptionPage />
                     <Route path=path!("/features") view=FeaturesPage />
                     <Route path=path!("/privacy") view=PrivacyPage />
                     <Route path=path!("/terms") view=TermsPage />

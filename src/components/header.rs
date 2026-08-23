@@ -22,7 +22,10 @@ pub fn Header() -> impl IntoView {
                         <A href="/standards">"Standards"</A>
                         <A href="/results">"Results"</A>
                         <A href="/rankings">"Rankings"</A>
+                        <A href="/national-rankings">"National Rankings"</A>
                         <A href="/records">"Records"</A>
+                        <A href="/wso-records">"WSO Records"</A>
+                        <A href="/adaptive-records">"Adaptive Records"</A>
                     </div>
                 </div>
                 <A href="/features">"Features"</A>
@@ -30,6 +33,34 @@ pub fn Header() -> impl IntoView {
                 <A href="/terms">"Terms"</A>
                 <A href="mailto:maddisen@meetcal.app">"Contact Us"</A>
             </nav>
+            <details class="mobile-nav">
+                <summary aria-label="Open navigation menu">
+                    <span class="mobile-nav-icon" aria-hidden="true"></span>
+                </summary>
+                <nav class="mobile-nav-panel" aria-label="Mobile navigation">
+                    <A href="/comp-data">"Competition Data"</A>
+                    <A href="/features">"Features"</A>
+                    <A href="/privacy">"Privacy"</A>
+                    <A href="/terms">"Terms"</A>
+                    <A href="mailto:maddisen@meetcal.app">"Contact Us"</A>
+                    <div class="mobile-nav-socials">
+                        <a
+                            href="https://www.instagram.com/meetcalapp/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            "Instagram"
+                        </a>
+                        <a
+                            href="https://github.com/meetcal"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            "GitHub"
+                        </a>
+                    </div>
+                </nav>
+            </details>
             <div class="header-actions">
                 <nav class="social-links" aria-label="MeetCal social media">
                     <a
@@ -58,9 +89,9 @@ pub fn Header() -> impl IntoView {
                     </a>
                 </nav>
                 {move || match auth.state.get() {
-                    AuthState::SignedIn(user_id) => view! { <ClerkUserButton user_id /> }.into_any(),
+                    AuthState::SignedIn(_) => view! { <ClerkUserButton /> }.into_any(),
                     AuthState::Loading => view! {
-                        <span class="auth-button-placeholder" aria-label="Loading account"></span>
+                        <span class="auth-button-placeholder" aria-hidden="true"></span>
                     }.into_any(),
                     AuthState::SignedOut => view! {
                         <button class="profile-button" type="button" on:click=move |_| open_clerk_sign_in()>
@@ -77,12 +108,12 @@ pub fn Header() -> impl IntoView {
 }
 
 #[component]
-fn ClerkUserButton(user_id: String) -> impl IntoView {
+fn ClerkUserButton() -> impl IntoView {
     let container = NodeRef::<leptos::html::Div>::new();
 
     Effect::new(move |_| {
         if let Some(element) = container.get() {
-            mount_user_button(&element, &user_id);
+            mount_user_button(&element);
         }
     });
     on_cleanup(move || {

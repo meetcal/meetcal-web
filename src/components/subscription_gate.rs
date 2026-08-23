@@ -1,8 +1,5 @@
 use crate::{
-    auth::{
-        AuthContext, AuthState, PurchasePackage, get_purchase_packages, has_comp_data_access,
-        mount_sign_in, purchase_package, unmount_sign_in,
-    },
+    auth::{AuthContext, AuthState, has_comp_data_access, mount_sign_in, unmount_sign_in},
     components::{footer::Footer, header::Header},
 };
 use leptos::prelude::*;
@@ -64,8 +61,8 @@ pub fn SubscriptionGate(children: ChildrenFn) -> impl IntoView {
                 </AccessShell>
             }.into_any(),
             AccessState::Paid => children().into_any(),
-            AccessState::Unpaid(user_id) => view! {
-                <PurchasePage user_id />
+            AccessState::Unpaid(_) => view! {
+                <MobileSubscriptionPage />
             }.into_any(),
             AccessState::Error(message) => view! {
                 <AccessShell>
@@ -116,25 +113,13 @@ fn ClerkSignIn() -> impl IntoView {
 }
 
 #[component]
-fn PurchasePage(user_id: String) -> impl IntoView {
-    let (packages, set_packages) = signal(None::<Result<Vec<PurchasePackage>, String>>);
-    let (purchasing, set_purchasing) = signal(None::<String>);
-    let (error, set_error) = signal(None::<String>);
-
-    let user_id_for_load = user_id.clone();
-    Effect::new(move |_| {
-        let user_id = user_id_for_load.clone();
-        leptos::task::spawn_local(async move {
-            set_packages.set(Some(get_purchase_packages(&user_id).await));
-        });
-    });
-
+pub fn MobileSubscriptionPage() -> impl IntoView {
     view! {
         <AccessShell>
             <div class="access-heading">
                 <p class="data-eyebrow">"MeetCal subscription"</p>
-                <h1>"Unlock competition data"</h1>
-                <p>"Choose a plan for complete access to MeetCal’s competition data tools."</p>
+                <h1>"Continue in the MeetCal app"</h1>
+                <p>"Subscriptions are created and managed only in the mobile app. Sign in there with the same account you use on the web."</p>
             </div>
             <div class="purchase-benefits" aria-label="Subscription benefits">
                 <span>"Qualifying totals"</span>
@@ -142,79 +127,11 @@ fn PurchasePage(user_id: String) -> impl IntoView {
                 <span>"Results and rankings"</span>
                 <span>"Competition records"</span>
             </div>
-            {move || match packages.get() {
-                None => view! {
-                    <div class="purchase-loading" role="status">
-                        <span class="access-spinner" aria-hidden="true"></span>
-                        <span>"Loading available plans…"</span>
-                    </div>
-                }.into_any(),
-                Some(Err(message)) => view! {
-                    <p class="access-inline-error" role="alert">{message}</p>
-                }.into_any(),
-                Some(Ok(packages)) if packages.is_empty() => view! {
-                    <div class="purchase-empty" role="alert">
-                        <h2>"Plans are not available yet"</h2>
-                        <p>"No web products were found in your RevenueCat Offerings. Please check back shortly."</p>
-                    </div>
-                }.into_any(),
-                Some(Ok(packages)) => view! {
-                    <div class="purchase-plans">
-                        {packages.into_iter().map(|package| {
-                            let package_id = package.identifier.clone();
-                            let package_id_for_state = package.identifier.clone();
-                            let user_id = user_id.clone();
-                            view! {
-                                <article class="purchase-plan">
-                                    <div class="purchase-plan-copy">
-                                        <h2>{package.title}</h2>
-                                        {package.description.map(|description| view! { <p>{description}</p> })}
-                                    </div>
-                                    <div class="purchase-plan-price">
-                                        <strong>{package.formatted_price}</strong>
-                                        <span>{package.period_label}</span>
-                                    </div>
-                                    <button
-                                        class="access-button purchase-button"
-                                        type="button"
-                                        disabled=move || purchasing.get().is_some()
-                                        on:click=move |_| {
-                                            let user_id = user_id.clone();
-                                            let package_id = package_id.clone();
-                                            set_purchasing.set(Some(package_id.clone()));
-                                            set_error.set(None);
-                                            leptos::task::spawn_local(async move {
-                                                match purchase_package(&user_id, &package_id).await {
-                                                    Ok(true) => {
-                                                        if let Some(window) = web_sys::window() {
-                                                            let _ = window.location().reload();
-                                                        }
-                                                    }
-                                                    Ok(false) => set_error.set(Some(
-                                                        "The purchase was not completed. Your account has not been charged.".to_owned(),
-                                                    )),
-                                                    Err(message) => set_error.set(Some(message)),
-                                                }
-                                                set_purchasing.set(None);
-                                            });
-                                        }
-                                    >
-                                        {move || if purchasing.get().as_deref() == Some(package_id_for_state.as_str()) {
-                                            "Opening checkout…"
-                                        } else {
-                                            "Choose plan"
-                                        }}
-                                    </button>
-                                </article>
-                            }
-                        }).collect_view()}
-                    </div>
-                }.into_any(),
-            }}
-            {move || error.get().map(|message| view! {
-                <p class="access-inline-error" role="alert">{message}</p>
-            })}
-            <p class="purchase-disclaimer">"Secure checkout is handled by RevenueCat. Subscription terms and renewal details are shown before purchase."</p>
+            <div class="mobile-subscription-links" aria-label="Open MeetCal on mobile">
+                <a class="access-button" href="https://apps.apple.com/us/app/meetcal/id6741133286">"Open on iPhone or iPad"</a>
+                <a class="access-button access-button-secondary" href="https://play.google.com/store/apps/details?id=com.memohnsen.meetcal">"Open on Android"</a>
+            </div>
+            <p class="purchase-disclaimer">"In the app, open Settings to start, change, restore, or cancel a subscription. Existing access will appear here after the app store and MeetCal finish syncing your account."</p>
         </AccessShell>
     }
 }

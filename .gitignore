@@ -5,3 +5,6 @@
 .vercel
 .env*
 .direnv/
+/node_modules/
+/playwright-report/
+/test-results/

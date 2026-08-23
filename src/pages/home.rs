@@ -222,7 +222,11 @@ pub fn HighlightSection() -> impl IntoView {
                 <h2>"Throw Out the PDFs"</h2>
                 <p>"Experience MeetCal's intuitive interface designed for athletes, coaches, and spectators."</p>
             </div>
-            <div class="screenshot-marquee" aria-label="A scrolling preview of MeetCal app screens">
+            <div
+                class="screenshot-marquee"
+                role="img"
+                aria-label="A scrolling preview of MeetCal app screens"
+            >
                 <div class="screenshot-track">
                     <div class="screenshot-set">
                         {screenshots.iter().map(|screenshot| view! {

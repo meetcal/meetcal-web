@@ -1,4 +1,4 @@
-use super::{SelectOptions, TableSkeleton, filter_options};
+use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response,
@@ -19,6 +19,7 @@ struct Standard {
 pub fn Standards() -> impl IntoView {
     let (gender, set_gender) = signal(String::new());
     let (age, set_age) = signal(String::new());
+    let (weight_class, set_weight_class) = signal(String::new());
     let (sort, set_sort) = signal("standard_a_desc".to_string());
     let standards =
         LocalResource::new(|| async { get_api_response::<Standard>("/data/standards").await });
@@ -41,13 +42,16 @@ pub fn Standards() -> impl IntoView {
                 Some(Ok(rows)) => {
                     let genders = filter_options(rows.iter().map(|row| row.gender.as_str()));
                     let ages = filter_options(rows.iter().map(|row| row.age_category.as_str()));
+                    let weights = filter_options(rows.iter().map(|row| row.weight_class.as_str()));
                     let selected_gender = gender.get();
                     let selected_age = age.get();
+                    let selected_weight = weight_class.get();
                     let mut filtered_standards = rows
                         .iter()
                         .filter(|row| {
-                            (selected_gender.is_empty() || row.gender == selected_gender)
-                                && (selected_age.is_empty() || row.age_category == selected_age)
+                            matches_filter(&row.gender, &selected_gender)
+                                && matches_filter(&row.age_category, &selected_age)
+                                && matches_filter(&row.weight_class, &selected_weight)
                         })
                         .collect::<Vec<_>>();
 
@@ -65,6 +69,7 @@ pub fn Standards() -> impl IntoView {
                             right.standard_a.total_cmp(&left.standard_a)
                         }),
                     }
+                    let is_empty = filtered_standards.is_empty();
                     let rows = filtered_standards
                         .into_iter()
                         .map(|row| view! {
@@ -94,6 +99,13 @@ pub fn Standards() -> impl IntoView {
                                     <SelectOptions values=ages selected=Some(selected_age.clone()) />
                                 </select>
                             </label>
+                            <label>
+                                "Weight class"
+                                <select class="data-filter" on:change=move |event| set_weight_class.set(event_target_value(&event))>
+                                    <option value="">"All classes"</option>
+                                    <SelectOptions values=weights selected=Some(selected_weight.clone()) />
+                                </select>
+                            </label>
                             <label class="data-sort">
                                 "Sort"
                                 <select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))>
@@ -115,7 +127,10 @@ pub fn Standards() -> impl IntoView {
                                         <th>"B"</th>
                                     </tr>
                                 </thead>
-                                <tbody>{rows}</tbody>
+                                <tbody>
+                                    {is_empty.then(|| view! { <EmptyTableRow columns=5 message="No standards match these filters." /> })}
+                                    {rows}
+                                </tbody>
                             </table>
                         </div>
                     }
@@ -124,5 +139,21 @@ pub fn Standards() -> impl IntoView {
             })}
         </section>
         <Footer />
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn standard_deserializes_from_the_api_shape() {
+        let standard: Standard = serde_json::from_str(
+            r#"{"age_category":"Junior","gender":"Men","standard_a":285.0,"standard_b":260.0,"weight_class":"79kg"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(standard.standard_a, 285.0);
+        assert_eq!(standard.standard_b, 260.0);
     }
 }

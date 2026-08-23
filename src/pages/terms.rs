@@ -1,5 +1,4 @@
 use crate::components::{footer::Footer, header::Header};
-use js_sys::Date;
 use leptos::prelude::*;
 
 #[component]
@@ -13,15 +12,6 @@ pub fn TermsPage() -> impl IntoView {
 
 #[component]
 pub fn TermsOfUse() -> impl IntoView {
-    let current_date = Date::new_0();
-
-    let formatted_date = format!(
-        "{:02}/{:02}/{}",
-        current_date.get_month() + 1,
-        current_date.get_date(),
-        current_date.get_full_year(),
-    );
-
     view! {
         <main>
             <div>
@@ -31,7 +21,7 @@ pub fn TermsOfUse() -> impl IntoView {
 
                 <div>
                     <p>
-                        "Effective Date: " {formatted_date}
+                        "Effective Date: August 23, 2026"
                     </p>
 
                     <h2>
@@ -39,7 +29,7 @@ pub fn TermsOfUse() -> impl IntoView {
                     </h2>
 
                     <p>
-                        "By downloading and using MeetCal, you agree to these Terms of Use. If you do not agree, please discontinue use of the app."
+                        "By downloading or using the MeetCal apps, website, or related services, you agree to these Terms of Use. If you do not agree, please discontinue use of MeetCal."
                     </p>
 
                     <h2>
@@ -68,13 +58,13 @@ pub fn TermsOfUse() -> impl IntoView {
                     </h2>
 
                     <p>
-                        "MeetCal collects and stores basic user information including name, email address, and role (e.g., athlete, coach, spectator). This information is used for app updates and marketing communications. For complete details about data collection and usage, please refer to our "
+                        "MeetCal processes account, subscription, saved-session, preference, analytics, and support information as described in our "
                         <a
-                            href="/privacy-policy"
+                            href="/privacy"
                         >
                             "Privacy Policy"
                         </a>
-                        "."
+                        ". The Privacy Policy explains what is collected, why it is used, when it is shared with service providers, and the choices available to you."
                     </p>
 
                     <h2>

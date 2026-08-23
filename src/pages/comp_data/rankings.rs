@@ -1,4 +1,4 @@
-use super::{SelectOptions, TableSkeleton, filter_options};
+use super::{EmptyTableRow, SelectOptions, TableSkeleton, filter_options, matches_filter};
 use crate::{
     components::{footer::Footer, header::Header},
     utils::api::get_api_response,
@@ -23,6 +23,7 @@ pub fn Rankings() -> impl IntoView {
     let (meet, set_meet) = signal(String::new());
     let (gender, set_gender) = signal(String::new());
     let (age, set_age) = signal(String::new());
+    let (weight_class, set_weight_class) = signal(String::new());
     let (sort, set_sort) = signal("rank_asc".to_string());
     let rankings =
         LocalResource::new(|| async { get_api_response::<Ranking>("/data/intl-rankings").await });
@@ -46,15 +47,18 @@ pub fn Rankings() -> impl IntoView {
                     let meets = filter_options(rankings.iter().map(|ranking| ranking.meet.as_str()));
                     let genders = filter_options(rankings.iter().map(|ranking| ranking.gender.as_str()));
                     let ages = filter_options(rankings.iter().map(|ranking| ranking.age_category.as_str()));
+                    let weights = filter_options(rankings.iter().map(|ranking| ranking.weight_class.as_str()));
                     let selected_meet = meet.get();
                     let selected_gender = gender.get();
                     let selected_age = age.get();
+                    let selected_weight = weight_class.get();
                     let mut filtered_rankings = rankings
                         .iter()
                         .filter(|ranking| {
                             (selected_meet.is_empty() || ranking.meet == selected_meet)
-                                && (selected_gender.is_empty() || ranking.gender == selected_gender)
-                                && (selected_age.is_empty() || ranking.age_category == selected_age)
+                                && matches_filter(&ranking.gender, &selected_gender)
+                                && matches_filter(&ranking.age_category, &selected_age)
+                                && matches_filter(&ranking.weight_class, &selected_weight)
                         })
                         .collect::<Vec<_>>();
 
@@ -72,6 +76,7 @@ pub fn Rankings() -> impl IntoView {
                         _ => filtered_rankings
                             .sort_by(|left, right| left.ranking.total_cmp(&right.ranking)),
                     }
+                    let is_empty = filtered_rankings.is_empty();
                     let rows = filtered_rankings
                         .into_iter()
                         .map(|ranking| view! {
@@ -111,6 +116,13 @@ pub fn Rankings() -> impl IntoView {
                                     <SelectOptions values=ages selected=Some(selected_age.clone()) />
                                 </select>
                             </label>
+                            <label>
+                                "Weight class"
+                                <select class="data-filter" on:change=move |event| set_weight_class.set(event_target_value(&event))>
+                                    <option value="">"All classes"</option>
+                                    <SelectOptions values=weights selected=Some(selected_weight.clone()) />
+                                </select>
+                            </label>
                             <label class="data-sort">
                                 "Sort"
                                 <select class="data-filter" on:change=move |event| set_sort.set(event_target_value(&event))>
@@ -137,7 +149,10 @@ pub fn Rankings() -> impl IntoView {
                                         <th>"Percent A"</th>
                                     </tr>
                                 </thead>
-                                <tbody>{rows}</tbody>
+                                <tbody>
+                                    {is_empty.then(|| view! { <EmptyTableRow columns=8 message="No rankings match these filters." /> })}
+                                    {rows}
+                                </tbody>
                             </table>
                         </div>
                     }
@@ -146,5 +161,21 @@ pub fn Rankings() -> impl IntoView {
             })}
         </section>
         <Footer />
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn international_ranking_deserializes_from_the_api_shape() {
+        let ranking: Ranking = serde_json::from_str(
+            r#"{"meet":"World Championships","ranking":2.0,"name":"Test Athlete","weight_class":"88kg","total":350.0,"percent_a":97.4,"gender":"Men","age_category":"Senior"}"#,
+        )
+        .unwrap();
+
+        assert_eq!(ranking.ranking, 2.0);
+        assert_eq!(ranking.percent_a, 97.4);
     }
 }

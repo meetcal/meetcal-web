@@ -1,17 +1,28 @@
 use leptos::prelude::*;
 
+pub mod adaptive_records;
 pub mod data_home;
+pub mod national_rankings;
 pub mod qual_totals;
 pub mod rankings;
 pub mod records;
 pub mod results;
 pub mod standards;
+pub mod wso_records;
 
 pub(crate) fn filter_options<'a>(values: impl Iterator<Item = &'a str>) -> Vec<String> {
-    let mut options = values.map(str::to_owned).collect::<Vec<_>>();
+    let mut options = values
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
     options.sort();
     options.dedup();
     options
+}
+
+pub(crate) fn matches_filter(value: &str, selected: &str) -> bool {
+    selected.is_empty() || value == selected
 }
 
 #[component]
@@ -52,5 +63,33 @@ pub(crate) fn TableSkeleton(columns: usize) -> impl IntoView {
                 <tbody>{rows}</tbody>
             </table>
         </div>
+    }
+}
+
+#[component]
+pub(crate) fn EmptyTableRow(columns: usize, message: &'static str) -> impl IntoView {
+    view! {
+        <tr class="data-empty-row">
+            <td colspan=columns>{message}</td>
+        </tr>
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn filter_options_are_trimmed_sorted_unique_and_nonempty() {
+        let options = filter_options(["  Women ", "Men", "", "Men", "   ", "Youth"].into_iter());
+
+        assert_eq!(options, ["Men", "Women", "Youth"]);
+    }
+
+    #[test]
+    fn empty_selection_matches_everything() {
+        assert!(matches_filter("Senior", ""));
+        assert!(matches_filter("Senior", "Senior"));
+        assert!(!matches_filter("Junior", "Senior"));
     }
 }

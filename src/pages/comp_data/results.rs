@@ -191,3 +191,20 @@ pub fn Results() -> impl IntoView {
         <Footer />
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_response_deserializes_results_and_suggestions() {
+        let response: SearchResponse = serde_json::from_str(
+            r#"{"matched_name":"Test Athlete","suggestions":["Test Athlete Jr"],"results":[{"meet":"Nationals","date":"2026-06-20","age":"Senior","body_weight":70.5,"snatch_best":100.0,"cj_best":125.0,"total":225.0}]}"#,
+        )
+        .unwrap();
+
+        assert_eq!(response.matched_name.as_deref(), Some("Test Athlete"));
+        assert_eq!(response.suggestions, ["Test Athlete Jr"]);
+        assert_eq!(response.results[0].total, 225.0);
+    }
+}

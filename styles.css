@@ -154,6 +154,101 @@ a {
     color: var(--text);
 }
 
+.mobile-nav {
+    position: relative;
+    display: none;
+}
+
+.mobile-nav summary {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    cursor: pointer;
+    list-style: none;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--card);
+}
+
+.mobile-nav summary::-webkit-details-marker {
+    display: none;
+}
+
+.mobile-nav summary:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+    outline-offset: 2px;
+}
+
+.mobile-nav-icon,
+.mobile-nav-icon::before,
+.mobile-nav-icon::after {
+    display: block;
+    width: 18px;
+    height: 2px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.16s ease, opacity 0.16s ease;
+}
+
+.mobile-nav-icon {
+    position: relative;
+}
+
+.mobile-nav-icon::before,
+.mobile-nav-icon::after {
+    content: "";
+    position: absolute;
+    left: 0;
+}
+
+.mobile-nav-icon::before { top: -6px; }
+.mobile-nav-icon::after { top: 6px; }
+
+.mobile-nav[open] .mobile-nav-icon { background: transparent; }
+.mobile-nav[open] .mobile-nav-icon::before { top: 0; transform: rotate(45deg); }
+.mobile-nav[open] .mobile-nav-icon::after { top: 0; transform: rotate(-45deg); }
+
+.mobile-nav-panel {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 30;
+    display: grid;
+    width: min(320px, calc(100vw - 24px));
+    padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: var(--shadow-lg);
+    text-align: left;
+}
+
+.mobile-nav-panel > a,
+.mobile-nav-socials a {
+    padding: 11px 12px;
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-weight: 650;
+}
+
+.mobile-nav-panel > a:hover,
+.mobile-nav-panel > a:focus-visible,
+.mobile-nav-socials a:hover,
+.mobile-nav-socials a:focus-visible {
+    background: color-mix(in srgb, var(--accent) 9%, var(--card));
+    color: var(--text);
+}
+
+.mobile-nav-socials {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    margin-top: 7px;
+    padding-top: 7px;
+    border-top: 1px solid var(--border);
+}
+
 .nav-menu {
     position: relative;
 }
@@ -267,6 +362,13 @@ a {
 .data-filters .data-sort .data-filter { width: 220px; }
 .data-status { margin: 22px 0; color: var(--text-secondary); }
 .data-status.error { color: #c43b3b; }
+.data-help { margin: 10px 0 0; color: var(--text-secondary); font-size: 0.82rem; }
+.data-filters-secondary { margin-top: 22px; }
+.data-query-form { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.data-query-form label { display: grid; gap: 5px; color: var(--text-secondary); font-size: 0.82rem; font-weight: 700; }
+.data-query-form .data-query-grow { flex: 1 1 260px; }
+.data-query-form .data-query-grow .data-filter { width: 100%; }
+.data-query-form .data-year-input { width: 120px; }
 
 .data-table-wrap { margin-top: 22px; overflow-x: auto; border: 1px solid var(--border); border-radius: 13px; background: var(--card); box-shadow: var(--shadow-sm); }
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.91rem; text-align: left; }
@@ -274,6 +376,8 @@ a {
 .data-table th { color: var(--text-secondary); font-size: 0.76rem; font-weight: 750; letter-spacing: 0.05em; text-transform: uppercase; }
 .data-table tbody tr:last-child td { border-bottom: 0; }
 .data-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, var(--card)); }
+.data-table .data-empty-row:hover { background: transparent; }
+.data-empty-row td { padding: 28px 14px; color: var(--text-secondary); text-align: center; }
 .data-table-skeleton { min-height: 420px; }
 .data-table-skeleton tbody tr:hover { background: transparent; }
 .data-skeleton {
@@ -583,6 +687,31 @@ a {
     margin: 22px auto 0;
     color: var(--text-secondary);
     font-size: 0.78rem;
+}
+
+.mobile-subscription-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.mobile-subscription-links .access-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+
+.access-button-secondary {
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+}
+
+.access-button-secondary:hover {
+    background: color-mix(in srgb, var(--accent) 8%, var(--card));
 }
 
 @keyframes access-spin {
@@ -1258,34 +1387,31 @@ main > div:has(> h4) > p {
 }
 
 /* ---------- Footer ---------- */
-/* Starts at the last h2 ("Ready to transform…"); each element in the run is
-   painted as a contiguous full-bleed near-black band. */
 
-main > h2:last-of-type,
-main > h2:last-of-type ~ a,
-main > h2:last-of-type ~ p,
-main > div:has(> a) {
+.site-footer {
+    width: 100vw;
+    margin-left: calc(50% - 50vw);
+    padding: clamp(64px, 9vh, 96px) 20px 48px;
     background: var(--footer-bg);
-    box-shadow: 0 0 0 100vmax var(--footer-bg);
-    clip-path: inset(0 -100vmax);
+    color: var(--footer-text);
+    text-align: center;
 }
 
-main > h2:last-of-type {
+.site-footer h2 {
+    max-width: 26ch;
     color: var(--footer-text);
     margin: 0 auto;
-    padding-top: clamp(64px, 9vh, 96px);
-    padding-bottom: 6px;
+    font-size: clamp(1.7rem, 3.8vw, 2.5rem);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
 }
 
-main > h2:last-of-type ~ a {
-    display: block;
-    margin: -1px 0 0; /* overlap so no subpixel seam shows between bands */
-    /* Keep the CTA's blue shadow within this band; the next footer row would
-       otherwise paint over the lower part of the glow. */
-    padding: 22px 0 32px;
-}
-
-main > h2:last-of-type ~ a > button {
+.footer-cta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 22px 0 32px;
     padding: 15px 32px;
     border-radius: 14px;
     background: linear-gradient(180deg, #1a8cff, var(--accent) 45%, var(--accent-deep));
@@ -1297,43 +1423,55 @@ main > h2:last-of-type ~ a > button {
     transition: transform 0.15s ease, filter 0.15s ease;
 }
 
-main > h2:last-of-type ~ a > button:hover {
+.footer-cta:hover {
     filter: brightness(1.06);
     transform: translateY(-2px);
 }
 
-/* © line */
-main > h2:last-of-type ~ p {
-    margin: -1px auto 0;
-    padding: 56px 0 4px;
+.site-footer p {
+    margin: 24px auto 4px;
     font-size: 0.85rem;
     color: var(--footer-muted);
 }
 
-/* legal links row */
-main > div:has(> a) {
-    margin: -1px 0 0;
-    padding: 4px 0 48px;
+.footer-legal {
+    display: flex;
+    justify-content: center;
+    gap: 4px;
 }
 
-main > div:has(> a) > a {
-    display: inline-block;
-    margin: 0;
-    padding: 0;
-    background: none;
-    box-shadow: none;
-    clip-path: none;
-}
-
-main > div:has(> a) > a > button {
+.footer-legal a {
     padding: 8px 11px;
     font-size: 0.85rem;
     color: var(--footer-muted);
     transition: color 0.15s ease;
 }
 
-main > div:has(> a) > a > button:hover {
+.footer-legal a:hover {
     color: #fff;
+}
+
+@media (max-width: 880px) {
+    .site-header {
+        gap: 12px;
+    }
+
+    .site-nav {
+        display: none;
+    }
+
+    .mobile-nav {
+        display: block;
+        margin-left: auto;
+    }
+
+    .header-actions {
+        margin-left: 0;
+    }
+
+    .header-actions .social-links {
+        display: none;
+    }
 }
 
 /* ---------- Legal pages (Terms / Privacy) ---------- */
@@ -1519,7 +1657,7 @@ main main:not(.features-page) a:hover {
 @media (max-width: 560px) {
     .site-header {
         gap: 10px;
-        width: min(100% - 24px, 1120px);
+        width: 100%;
         min-height: 70px;
     }
 
@@ -1534,31 +1672,32 @@ main main:not(.features-page) a:hover {
         height: 29px;
     }
 
-    .site-nav {
-        display: none;
-    }
-
     .profile-button {
+        min-height: 44px;
         padding: 8px 10px;
     }
 
     .header-actions {
         gap: 4px;
+        min-width: 0;
     }
 
-    .social-links {
-        gap: 0;
+    .clerk-user-button {
+        width: 42px;
+        min-width: 42px;
+        max-width: 42px;
+        min-height: 44px;
+        overflow: hidden;
     }
 
-    .social-link {
-        width: 32px;
-        height: 32px;
+    .clerk-user-button .cl-userButtonOuterIdentifier {
+        display: none;
     }
 
     .hero-section,
     .download-section,
     .interaction-section {
-        width: min(100% - 24px, 1120px);
+        width: 100%;
     }
 
     .hero-section {
@@ -1573,6 +1712,54 @@ main main:not(.features-page) a:hover {
 
     .store-links,
     .store-link {
+        width: 100%;
+    }
+
+    .data-page {
+        width: 100%;
+        margin: 24px auto 56px;
+    }
+
+    .data-card-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .data-filters,
+    .data-query-form,
+    .result-search {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .data-filters label,
+    .data-filters .data-filter,
+    .data-filters .data-sort,
+    .data-filters .data-sort .data-filter,
+    .data-query-form label,
+    .data-query-form .data-year-input,
+    .result-search .data-filter,
+    .data-search-button {
+        width: 100%;
+        margin-left: 0;
+    }
+
+    .data-table-wrap {
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-inline: contain;
+    }
+
+    .access-page {
+        padding: 28px 0 64px;
+    }
+
+    .access-card {
+        padding: 26px 16px;
+        border-radius: 18px;
+    }
+
+    .mobile-subscription-links,
+    .mobile-subscription-links .access-button {
         width: 100%;
     }
 

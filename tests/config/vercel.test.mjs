@@ -1,0 +1,70 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const config = JSON.parse(
+  await readFile(new URL("../../vercel.json", import.meta.url), "utf8"),
+);
+const globalHeaders = Object.fromEntries(
+  config.headers
+    .find(({ source }) => source === "/(.*)")
+    .headers.map(({ key, value }) => [key.toLowerCase(), value]),
+);
+
+test("production responses enforce HTTPS and a restrictive CSP", () => {
+  assert.match(globalHeaders["strict-transport-security"], /max-age=31536000/);
+
+  const csp = globalHeaders["content-security-policy"];
+  for (const directive of [
+    "default-src 'self'",
+    "base-uri 'self'",
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "worker-src 'self' blob:",
+    "upgrade-insecure-requests",
+  ]) {
+    assert.ok(csp.includes(directive), `missing CSP directive: ${directive}`);
+  }
+  assert.ok(!csp.includes("'unsafe-eval'"), "CSP must not allow general JavaScript eval");
+});
+
+test("CSP preserves the application's existing provider integrations", () => {
+  const csp = globalHeaders["content-security-policy"];
+  for (const source of [
+    "'wasm-unsafe-eval'",
+    "https://cdn.jsdelivr.net",
+    "https://unpkg.com",
+    "https://*.clerk.accounts.dev",
+    "https://api.revenuecat.com",
+    "https://e.revenue.cat",
+    "https://*.posthog.com",
+  ]) {
+    assert.ok(csp.includes(source), `missing required CSP source: ${source}`);
+  }
+});
+
+test("the source document uses an external Wasm bootstrap", async () => {
+  const html = await readFile(new URL("../../index.html", import.meta.url), "utf8");
+  assert.match(html, /<script type="module" src="\/app-bootstrap\.js"><\/script>/);
+  assert.doesNotMatch(html, /<script type="module">/);
+});
+
+test("production rewrites serve route-specific metadata shells", async () => {
+  const featureRewrite = config.rewrites.find(({ source }) => source === "/features");
+  assert.equal(featureRewrite.destination, "/seo/features.html");
+
+  const featureHtml = await readFile(
+    new URL("../../dist/seo/features.html", import.meta.url),
+    "utf8",
+  );
+  assert.match(featureHtml, /<title>MeetCal Features/);
+  assert.match(featureHtml, /content="index, follow"/);
+  assert.match(featureHtml, /href="https:\/\/meetcal\.app\/features"/);
+
+  const gatedHtml = await readFile(
+    new URL("../../dist/seo/qualifying-totals.html", import.meta.url),
+    "utf8",
+  );
+  assert.match(gatedHtml, /<title>Weightlifting Qualifying Totals<\/title>/);
+  assert.match(gatedHtml, /content="noindex, nofollow"/);
+});
