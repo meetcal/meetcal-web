@@ -111,6 +111,7 @@ a {
 /* ---------- Header ---------- */
 
 .site-header {
+    position: relative;
     display: flex;
     align-items: center;
     gap: 24px;
@@ -155,7 +156,6 @@ a {
 }
 
 .mobile-nav {
-    position: relative;
     display: none;
 }
 
@@ -1517,6 +1517,18 @@ main > div:has(> h4) > p {
     .header-actions .social-links {
         display: none;
     }
+
+    .clerk-user-button {
+        width: 42px;
+        min-width: 42px;
+        max-width: 42px;
+        min-height: 44px;
+        overflow: hidden;
+    }
+
+    .clerk-user-button .cl-userButtonOuterIdentifier {
+        display: none;
+    }
 }
 
 /* ---------- Legal pages (Terms / Privacy) ---------- */
@@ -1725,18 +1737,6 @@ main main:not(.features-page) a:hover {
     .header-actions {
         gap: 4px;
         min-width: 0;
-    }
-
-    .clerk-user-button {
-        width: 42px;
-        min-width: 42px;
-        max-width: 42px;
-        min-height: 44px;
-        overflow: hidden;
-    }
-
-    .clerk-user-button .cl-userButtonOuterIdentifier {
-        display: none;
     }
 
     .hero-section,

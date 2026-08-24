@@ -58,7 +58,7 @@ export function mount_clerk_user_button(element) {
   if (!window.Clerk?.isSignedIn) return;
   element.replaceChildren();
   window.Clerk.mountUserButton(element, {
-    showName: true,
+    showName: !window.matchMedia("(max-width: 880px)").matches,
     userProfileMode: "modal",
     appearance: {
       elements: {
