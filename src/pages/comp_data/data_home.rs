@@ -7,7 +7,7 @@ use leptos_router::components::A;
 pub fn CompData() -> impl IntoView {
     view! {
         <DataPage
-            heading="Find the numbers you need"
+            heading="Find the Numbers You Need"
             intro="Browse meets, team performance, athlete history, qualification data, rankings, and records."
             section_class="data-page data-home"
         >

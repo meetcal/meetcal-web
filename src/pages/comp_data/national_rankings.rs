@@ -129,7 +129,7 @@ pub fn NationalRankings() -> impl IntoView {
 
     view! {
         <DataPage
-            heading="National rankings"
+            heading="National Rankings"
             intro="Find each athlete’s best total for a USAW or USAMW division. Add a year to limit the rankings to that season."
         >
             <NationalRankingsForm set_request />

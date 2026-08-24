@@ -11,7 +11,7 @@ pub(crate) fn DataPage(
     view! {
         <Header />
         <section class=section_class>
-            <p class="data-eyebrow">"Competition data"</p>
+            <p class="data-eyebrow">"Competition Data"</p>
             <h1>{heading}</h1>
             <p class="data-intro">{intro}</p>
             {children()}

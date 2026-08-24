@@ -45,7 +45,7 @@ pub fn AdaptiveRecords() -> impl IntoView {
 
     view! {
         <DataPage
-            heading="Adaptive records"
+            heading="Adaptive Records"
             intro="Top USAW and USAMW adaptive performances by gender and weight class."
         >
             {move || records.with(|response| table_response(response, 4, "adaptive records", |records| {

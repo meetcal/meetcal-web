@@ -55,7 +55,7 @@ pub fn Rankings() -> impl IntoView {
 
     view! {
         <DataPage
-            heading="International rankings"
+            heading="International Rankings"
             intro="Search current international rankings by athlete, meet, division, or weight class."
         >
             {move || rankings.with(|response| table_response(response, 8, "rankings", |rankings| {

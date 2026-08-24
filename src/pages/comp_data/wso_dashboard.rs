@@ -22,7 +22,7 @@ pub fn WsoDashboard() -> impl IntoView {
         LocalResource::new(move || load_meet_data::<Athlete>(meet.get(), "/meets/athletes"));
     let results =
         LocalResource::new(move || load_meet_data::<LiftingResult>(meet.get(), "/lifting-results"));
-    view! { <DataPage heading="WSO meet dashboard" intro="See participation, make rates, lifted volume, and athlete totals for one WSO at a meet.">
+    view! { <DataPage heading="WSO Meet Dashboard" intro="See participation, make rates, lifted volume, and athlete totals for one WSO at a meet.">
         {move || upcoming.with(|upcoming| completed.with(|completed| match (upcoming, completed) {
             (Some(Ok(upcoming)), Some(Ok(completed))) => {
                 let mut meets = upcoming.iter().chain(completed.iter()).map(|row| row.name.clone()).collect::<Vec<_>>();

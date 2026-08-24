@@ -83,9 +83,9 @@ pub fn MeetCenter() -> impl IntoView {
             {move || if meet.get().is_empty() { view! { <DataStatus message="Search for and select a meet to load its competition data." /> }.into_any() } else { view! {
                 <h2 class="data-section-title">"Schedule"</h2>
                 {move || schedule.with(|response| table_response(response, 7, "schedule", table_schedule))}
-                <h2 class="data-section-title">"Start list"</h2>
+                <h2 class="data-section-title">"Start List"</h2>
                 {move || athletes.with(|response| table_response(response, 9, "start list", table_athletes))}
-                <h2 class="data-section-title">"Full results"</h2>
+                <h2 class="data-section-title">"Full Results"</h2>
                 {move || results.with(|response| table_response(response, 13, "meet results", table_results))}
             }.into_any() }}
         </DataPage>

@@ -86,7 +86,7 @@ pub fn ClubDashboard() -> impl IntoView {
     });
     view! {
         <DataPage
-            heading="Club meet dashboard"
+            heading="Club Meet Dashboard"
             intro="Review a club’s athletes, medals, PRs, make rates, and meet totals."
         >
             {move || clubs.with(|response| select_response(response, "Loading clubs…", "clubs", |clubs| view! {

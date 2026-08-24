@@ -61,7 +61,7 @@ test("authenticated mobile headers fit at narrow widths", async ({ page, isMobil
   await page.route("**/data/qualifying-totals", async (route) => route.fulfill(jsonResponse([])));
   await page.setViewportSize({ width: 320, height: 568 });
   await page.goto("/qualifying-totals");
-  await expect(page.getByRole("heading", { name: "Qualifying totals" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Qualifying Totals" })).toBeVisible();
   await expect(page.locator(".clerk-user-button")).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(321);
 });

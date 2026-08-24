@@ -62,7 +62,7 @@ pub fn WsoRecords() -> impl IntoView {
 
     view! {
         <DataPage
-            heading="WSO records"
+            heading="WSO Records"
             intro="Browse records published by USA Weightlifting state organizations."
         >
             {move || organizations.with(|response| select_response(response, "Loading organizations…", "WSOs", |organizations| view! {

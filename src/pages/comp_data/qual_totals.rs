@@ -52,7 +52,7 @@ pub fn QualifyingTotals() -> impl IntoView {
 
     view! {
         <DataPage
-            heading="Qualifying totals"
+            heading="Qualifying Totals"
             intro="Filter qualification totals by event, gender, age category, or weight class."
         >
             {move || {

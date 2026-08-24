@@ -46,7 +46,7 @@ test("subscribed users can filter and sort qualifying totals", async ({ page }) 
   });
 
   await page.goto("/qualifying-totals");
-  await expect(page.getByRole("heading", { level: 1, name: "Qualifying totals" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Qualifying Totals" })).toBeVisible();
   expect(await page.getByLabel("Weight class").locator("option").allTextContents()).toEqual([
     "All classes",
     "63kg",
@@ -206,8 +206,8 @@ test("meet center joins details, schedule, start list, and full results", async 
   await expect(page.getByText("Test Arena", { exact: false })).toBeVisible();
   await expect(page.getByText(/June 20, 2026.*June 20, 2026/)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Schedule" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Start list" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Full results" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Start List" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Full Results" })).toBeVisible();
   await expect(page.locator("tbody").first()).toContainText("June 20, 2026");
   await expect(page.locator("tbody").first()).toContainText("8:00 AM");
   await expect(page.locator("tbody").first()).toContainText("10:00 AM");
@@ -265,7 +265,7 @@ test("wrapped builds a readable single-athlete yearly recap", async ({ page }) =
   await page.getByLabel("Year").fill("2026");
   await page.getByRole("button", { name: "Build wrapped" }).click();
 
-  await expect(page.getByRole("heading", { name: "2026 wrapped — Test Athlete" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "2026 Wrapped — Test Athlete" })).toBeVisible();
   await expect(page.getByLabel("Compare with (optional)")).toHaveCount(0);
   await expect(page.locator(".wrapped-top-meet")).toContainText("Athletic Lab Weightlifting Club 2026 March Madness Weightlifting Meet");
 });
