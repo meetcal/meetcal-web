@@ -41,6 +41,21 @@ test("CSP preserves the application's existing provider integrations", () => {
   ]) {
     assert.ok(csp.includes(source), `missing required CSP source: ${source}`);
   }
+
+  const connectSrc = csp
+    .split(";")
+    .map((directive) => directive.trim())
+    .find((directive) => directive.startsWith("connect-src "));
+  for (const source of [
+    "https://clerk.meetcal.app",
+    "https://api.meetcal.app",
+    "https://api.revenuecat.com",
+  ]) {
+    assert.ok(
+      connectSrc.includes(source),
+      `connect-src must allow the production API host: ${source}`,
+    );
+  }
 });
 
 test("the source document uses an external Wasm bootstrap", async () => {
